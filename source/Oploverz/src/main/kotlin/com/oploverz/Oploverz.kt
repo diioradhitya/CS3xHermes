@@ -230,11 +230,23 @@ class Oploverz : MainAPI() {
         val sources = resp.data.streamUrl ?: return false
         if (sources.isEmpty()) return false
 
-        // upbolt.to is a Cloudflare-protected iframe host. The extractor
-        // class UpBolt (extends StreamWishExtractor) registered in Plugin
-        // will resolve the iframe page into actual m3u8 streams.
         var found = false
         sources.forEach { src ->
+            // Add direct stream URL as primary link (CloudStream will try
+            // to play it directly, e.g. via WebView which solves the
+            // Cloudflare challenge on-device).
+            callback(
+                newExtractorLink(
+                    source = name,
+                    name = src.source,
+                    url = src.url
+                ) { this.referer = "${mainUrl}/" }
+            )
+            found = true
+
+            // Also try the StreamWish-based extractor (UpBolt) as a
+            // secondary attempt — this resolves upbolt.to's iframe into
+            // an m3u8 stream when Cloudflare passes.
             try {
                 loadExtractor(
                     url = src.url,
@@ -242,9 +254,8 @@ class Oploverz : MainAPI() {
                     subtitleCallback = subtitleCallback,
                     callback = callback
                 )
-                found = true
             } catch (e: Exception) {
-                // skip this source if extractor fails
+                // extractor failed silently; direct link already added above
             }
         }
         return found
