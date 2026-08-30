@@ -7,9 +7,18 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class OploverzPlugin : Plugin() {
     override fun load(context: Context) {
-        // UpBolt class in Extractors.kt extends StreamWishExtractor and is
-        // auto-registered by CloudStream's reflection. We just need to
-        // register the MainAPI.
+        // Register all shared StreamWish-family extractors that might handle
+        // upbolt.to (or any other Cloudflare-protected source). Registering
+        // them makes them available to loadExtractor() in MainAPI.loadLinks().
         registerMainAPI(Oploverz())
+
+        registerExtractorAPI(UpBolt())
+        registerExtractorAPI(Hglink())
+        registerExtractorAPI(Short())
+        registerExtractorAPI(Shorticu())
+        registerExtractorAPI(Ghbrisk())
+        registerExtractorAPI(Dhcplay())
+        registerExtractorAPI(Hgcloud())
+        registerExtractorAPI(Luluvdo())
     }
 }
