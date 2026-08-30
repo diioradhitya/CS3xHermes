@@ -8,10 +8,10 @@
     "language": "id",
     "authors": ["Dio R"],
     "tvTypes": ["AsianDrama", "TvSeries", "Movie"],
-    "version": 1,
+    "version": 11,
     "internalName": "Kawanfilm",
     "description": "Kawanfilm - Streaming Movie Sub Indo",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.10/builds/v2026.08.30.10/Kawanfilm.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.11/builds/v2026.08.30.11/Kawanfilm.cs3",
     "name": "Kawanfilm"
   },
   {
@@ -23,10 +23,10 @@
     "language": "id",
     "authors": ["Dio R"],
     "tvTypes": ["Anime", "AsianDrama", "Movie"],
-    "version": 1,
+    "version": 11,
     "internalName": "Oploverz",
     "description": "Oploverz - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.10/builds/v2026.08.30.10/Oploverz.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.11/builds/v2026.08.30.11/Oploverz.cs3",
     "name": "Oploverz"
   },
   {
@@ -38,10 +38,10 @@
     "language": "id",
     "authors": ["Dio R"],
     "tvTypes": ["Movie", "TvSeries"],
-    "version": 1,
+    "version": 11,
     "internalName": "Sflix",
     "description": "SFlix - Movie and TV Series via TMDB + 6 iframe hosts",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.10/builds/v2026.08.30.10/Sflix.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.11/builds/v2026.08.30.11/Sflix.cs3",
     "name": "Sflix"
   }
 ]

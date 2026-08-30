@@ -165,7 +165,7 @@ if [[ $COMMIT_ONLY -eq 0 ]]; then
     \"language\": \"$lang\",
     \"authors\": [\"Dio R\"],
     \"tvTypes\": [$(echo "$tvtypes" | sed 's/,/", "/g' | sed 's/.*/"&"/')],
-    \"version\": 1,
+    \"version\": ${NN},
     \"internalName\": \"$plugin\",
     \"description\": \"${desc:-\"🎬 $plugin - Streaming plugin\"}\",
     \"url\": \"https://raw.githubusercontent.com/diioradhitya/CS3xHermes/${VERSION}/builds/${VERSION}/${plugin}.cs3\",
