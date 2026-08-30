@@ -11,7 +11,7 @@
     "version": 1,
     "internalName": "Kawanfilm",
     "description": "Kawanfilm - Streaming Movie Sub Indo",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.9/builds/v2026.08.30.9/Kawanfilm.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.10/builds/v2026.08.30.10/Kawanfilm.cs3",
     "name": "Kawanfilm"
   },
   {
@@ -26,7 +26,7 @@
     "version": 1,
     "internalName": "Oploverz",
     "description": "Oploverz - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.9/builds/v2026.08.30.9/Oploverz.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.10/builds/v2026.08.30.10/Oploverz.cs3",
     "name": "Oploverz"
   },
   {
@@ -41,7 +41,7 @@
     "version": 1,
     "internalName": "Sflix",
     "description": "SFlix - Movie and TV Series via TMDB + 6 iframe hosts",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.9/builds/v2026.08.30.9/Sflix.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.10/builds/v2026.08.30.10/Sflix.cs3",
     "name": "Sflix"
   }
 ]
