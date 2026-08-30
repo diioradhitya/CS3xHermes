@@ -155,28 +155,29 @@ class Oploverz : MainAPI() {
     // ===== Load detail =====
 
     override suspend fun load(url: String): LoadResponse? {
-        // url is in format "slug|seriesId" or just "slug"
-        val parts = url.split("|", limit = 2)
-        val slug = parts[0]
-        val seriesId = parts.getOrNull(1)?.toIntOrNull()
+        // url is full API URL like "https://backapi.oploverz.ac/api/series/1734"
+        // Extract seriesId from the path
+        val seriesIdMatch = Regex("/api/series/(\\d+)").find(url)
+        val seriesId = seriesIdMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+            ?: return null
 
-        // We have two paths:
-        // 1) If we already know seriesId (from toSearchResponse), use it directly
-        // 2) Otherwise look up by slug via search
-        val series = if (seriesId != null && seriesId > 0) {
-            fetchSeries(1).data.firstOrNull { it.id == seriesId }
-        } else {
-            searchSeries(slug).data.firstOrNull { it.slug == slug }
-        } ?: return null
-
-        return loadSeriesDetail(series)
+        // Fetch all series on page 1, 2, 3 to find the matching id
+        var series: SeriesItem? = null
+        for (p in 1..5) {
+            val list = fetchSeries(p).data
+            series = list.firstOrNull { it.id == seriesId }
+            if (series != null) break
+        }
+        return series?.let { loadSeriesDetail(it) }
     }
 
     private suspend fun loadSeriesDetail(series: SeriesItem): LoadResponse {
-        val episodes = fetchEpisodes(series.id).data
+        val episodes = fetchEpisodes(series.id).data.filter { it.series?.id == series.id }
         val epList = episodes.mapNotNull { ep ->
             val epNum = ep.episodeNumber.toIntOrNull() ?: return@mapNotNull null
-            val epUrl = "${series.slug}|${ep.id}|${epNum}"
+            // Episode URL: use full API endpoint so loadLinks can fetch it
+            // directly. CloudStream persists data as opaque string.
+            val epUrl = "$mainUrl/api/episodes/${ep.id}"
             newEpisode(epUrl) {
                 this.name = ep.title ?: "Episode ${ep.episodeNumber}"
                 this.episode = epNum
@@ -189,7 +190,7 @@ class Oploverz : MainAPI() {
         val type = if (isMovie) TvType.Movie else TvType.Anime
 
         return if (isMovie) {
-            newMovieLoadResponse(series.title, "${series.slug}|${series.id}", type, "${series.slug}|${series.id}") {
+            newMovieLoadResponse(series.title, "${mainUrl}/api/series/${series.id}", type, "${mainUrl}/api/episodes/${episodes.firstOrNull()?.id ?: 0}") {
                 this.posterUrl = posterUrl(series.poster)
                 this.backgroundPosterUrl = posterUrl(series.poster)
                 this.year = series.releaseDate?.take(4)?.toIntOrNull()
@@ -199,7 +200,7 @@ class Oploverz : MainAPI() {
                 this.tags = series.genres.map { it.name }
             }
         } else {
-            newTvSeriesLoadResponse(series.title, "${series.slug}|${series.id}", type, epList) {
+            newTvSeriesLoadResponse(series.title, "${mainUrl}/api/series/${series.id}", type, epList) {
                 this.posterUrl = posterUrl(series.poster)
                 this.backgroundPosterUrl = posterUrl(series.poster)
                 this.year = series.releaseDate?.take(4)?.toIntOrNull()
@@ -219,12 +220,8 @@ class Oploverz : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // data is "slug|episodeId|episodeNum"
-        val parts = data.split("|", limit = 3)
-        if (parts.size < 2) return false
-        val episodeId = parts[1].toIntOrNull() ?: return false
-
-        val resp = app.get("$mainUrl/api/episodes/$episodeId").parsedSafe<EpisodeSingle>()
+        // data is full URL like "https://backapi.oploverz.ac/api/episodes/45538"
+        val resp = app.get(data).parsedSafe<EpisodeSingle>()
             ?: return false
 
         val sources = resp.data.streamUrl ?: return false
@@ -266,7 +263,10 @@ class Oploverz : MainAPI() {
     private fun SeriesItem.toSearchResponse(): SearchResponse {
         val isMovie = releaseType.equals("Movie", true)
         val type = if (isMovie) TvType.Movie else TvType.Anime
-        return newAnimeSearchResponse(title, "$slug|$id", type) {
+        // Use full API URL as the canonical identifier so load() can
+        // resolve it directly without round-tripping through search.
+        val dataUrl = "$mainUrl/api/series/$id"
+        return newAnimeSearchResponse(title, dataUrl, type) {
             this.posterUrl = posterUrl(this@toSearchResponse.poster)
             this.year = releaseDate?.take(4)?.toIntOrNull()
             this.score = this@toSearchResponse.score?.let { Score.from10(it) }
