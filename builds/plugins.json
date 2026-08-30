@@ -1,44 +1,32 @@
 [
   {
-    "iconUrl": "https://i.imgur.com/example.png",
+    "iconUrl": "https://www.google.com/s2/favicons?domain=Kawanfilm&sz=%size%",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 33770,
+    "fileSize": 39269,
     "status": 1,
     "language": "id",
-    "authors": [
-      "Dio R"
-    ],
-    "tvTypes": [
-      "Movie",
-      "TvSeries"
-    ],
-    "version": 1,
-    "internalName": "SFlix",
-    "description": "\ud83c\udfac SFlix \u2014 Movie and TV Series streaming via TMDB metadata + 6 iframe hosts",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.2/builds/v2026.08.30.2/Sflix.cs3",
-    "name": "SFlix"
-  },
-  {
-    "iconUrl": "https://i.imgur.com/example.png",
-    "apiVersion": 1,
-    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 29722,
-    "status": 1,
-    "language": "id",
-    "authors": [
-      "Dio R"
-    ],
-    "tvTypes": [
-      "Movie",
-      "TvSeries",
-      "Anime",
-      "AsianDrama"
-    ],
+    "authors": ["Dio R"],
+    "tvTypes": ["AsianDrama", "TvSeries", "Movie"],
     "version": 1,
     "internalName": "Kawanfilm",
-    "description": "\ud83c\udfac Kawanfilm \u2014 Subtitle Indonesia movie & series streaming (web.kawanfilm21.co)",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.2/builds/v2026.08.30.2/Kawanfilm.cs3",
+    "description": "Kawanfilm - Streaming Movie Sub Indo",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.3/builds/v2026.08.30.3/Kawanfilm.cs3",
     "name": "Kawanfilm"
+  },
+  {
+    "iconUrl": "https://www.google.com/s2/favicons?domain=Sflix&sz=%size%",
+    "apiVersion": 1,
+    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+    "fileSize": 52433,
+    "status": 1,
+    "language": "id",
+    "authors": ["Dio R"],
+    "tvTypes": ["Movie", "TvSeries"],
+    "version": 1,
+    "internalName": "Sflix",
+    "description": "SFlix - Movie and TV Series via TMDB + 6 iframe hosts",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.3/builds/v2026.08.30.3/Sflix.cs3",
+    "name": "Sflix"
   }
 ]
