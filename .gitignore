@@ -6,10 +6,10 @@ build/
 .DS_Store
 local.properties
 
-# Secrets
+# Secrets (file lives at ~/.gh_token outside this repo)
 *.token
-gh_token
-~/.gh_token
+*.key
+*.secret
 
 # OS
 Thumbs.db
