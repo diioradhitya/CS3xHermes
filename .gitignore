@@ -1,0 +1,15 @@
+# Build artifacts & deployment configs
+build/
+.gradle/
+*.iml
+.idea/
+.DS_Store
+local.properties
+
+# Secrets
+*.token
+gh_token
+~/.gh_token
+
+# OS
+Thumbs.db

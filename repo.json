@@ -1,0 +1,9 @@
+{
+  "name": "Dio's CloudStream Repository",
+  "description": "Personal CloudStream plugins repository",
+  "iconUrl": "https://i.imgur.com/example.png",
+  "manifestVersion": 1,
+  "pluginLists": [
+    "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/plugins.json"
+  ]
+}

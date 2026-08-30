@@ -1,0 +1,22 @@
+[
+  {
+    "iconUrl": "https://i.imgur.com/example.png",
+    "apiVersion": 1,
+    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+    "fileSize": 33770,
+    "status": 1,
+    "language": "id",
+    "authors": [
+      "Dio R"
+    ],
+    "tvTypes": [
+      "Movie",
+      "TvSeries"
+    ],
+    "version": 1,
+    "internalName": "SFlix",
+    "description": "🎬 SFlix — Movie and TV Series streaming via TMDB metadata + 6 iframe hosts",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.1/builds/v2026.08.30.1/Sflix.cs3",
+    "name": "SFlix"
+  }
+]
