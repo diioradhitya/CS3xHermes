@@ -168,7 +168,12 @@ class Short : StreamWishExtractor() {
 
 class Shorticu : StreamWishExtractor() {
     override var name = "Shorticu"
-    override var mainUrl = "https://shorticu.com"
+    override val mainUrl = "https://shorticu.com"
+}
+
+class UpBolt : StreamWishExtractor() {
+    override var name = "UpBolt"
+    override val mainUrl = "https://upbolt.to"
 }
 
 // =====================================================================

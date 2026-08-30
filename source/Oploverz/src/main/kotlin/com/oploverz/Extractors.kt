@@ -1,4 +1,4 @@
-package com.cs3xhermes.extractors
+package com.oploverz
 
 import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
