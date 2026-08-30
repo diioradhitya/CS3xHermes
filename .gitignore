@@ -11,5 +11,8 @@ local.properties
 *.key
 *.secret
 
+# Release script state
+.latest_version
+
 # OS
 Thumbs.db
