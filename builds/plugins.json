@@ -15,8 +15,30 @@
     ],
     "version": 1,
     "internalName": "SFlix",
-    "description": "🎬 SFlix — Movie and TV Series streaming via TMDB metadata + 6 iframe hosts",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.1/builds/v2026.08.30.1/Sflix.cs3",
+    "description": "\ud83c\udfac SFlix \u2014 Movie and TV Series streaming via TMDB metadata + 6 iframe hosts",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.2/builds/v2026.08.30.2/Sflix.cs3",
     "name": "SFlix"
+  },
+  {
+    "iconUrl": "https://i.imgur.com/example.png",
+    "apiVersion": 1,
+    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+    "fileSize": 29722,
+    "status": 1,
+    "language": "id",
+    "authors": [
+      "Dio R"
+    ],
+    "tvTypes": [
+      "Movie",
+      "TvSeries",
+      "Anime",
+      "AsianDrama"
+    ],
+    "version": 1,
+    "internalName": "Kawanfilm",
+    "description": "\ud83c\udfac Kawanfilm \u2014 Subtitle Indonesia movie & series streaming (web.kawanfilm21.co)",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.30.2/builds/v2026.08.30.2/Kawanfilm.cs3",
+    "name": "Kawanfilm"
   }
 ]
