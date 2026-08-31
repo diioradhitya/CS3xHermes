@@ -217,19 +217,9 @@ class Sflix : MainAPI() {
         } else ""
 
         val path = if (isTv) "tv/$tmdbId$seasonEpisode" else "movie/$tmdbId"
+        val vidsrc = if (isTv) "https://vidsrc.cc/v2/embed/tv/$tmdbId$seasonEpisode" else "https://vidsrc.cc/v2/embed/movie/$tmdbId"
 
-        val servers = listOf(
-            "moviesapi.to" to "https://moviesapi.to/$path",
-            "vidcore.net" to "https://vidcore.net/$path?autoPlay=true",
-            "videasy.net" to "https://player.videasy.net/$path",
-            "vidfast.vc" to "https://vidfast.vc/$path?autoPlay=true",
-            "vidsrc-embed.ru" to "https://vidsrc-embed.ru/embed/$path",
-            "embedmaster.link" to "https://embedmaster.link/$path"
-        )
-
-        servers.forEach { (name, url) ->
-            loadExtractor(url, "$mainUrl/", subtitleCallback, callback)
-        }
+        loadExtractor(vidsrc, "$mainUrl/", subtitleCallback, callback)
 
         return true
     }
