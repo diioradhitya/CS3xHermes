@@ -218,48 +218,30 @@ class Sflix : MainAPI() {
 
         val path = if (isTv) "tv/$tmdbId$seasonEpisode" else "movie/$tmdbId"
 
-        callback(
-            newExtractorLink(
-                source = name,
-                name = "Server 1 — moviesapi.to",
-                url = "https://moviesapi.to/$path"
-            ) { this.referer = "$mainUrl/" }
+        val servers = listOf(
+            "Server 1 — moviesapi.to" to "https://moviesapi.to/$path",
+            "Server 2 — vidcore.net" to "https://vidcore.net/$path?autoPlay=true",
+            "Server 3 — videasy.net" to "https://player.videasy.net/$path",
+            "Server 4 — vidfast.vc" to "https://vidfast.vc/$path?autoPlay=true",
+            "Server 5 — vidsrc-embed.ru" to "https://vidsrc-embed.ru/embed/$path",
+            "Server 6 — embedmaster.link" to "https://embedmaster.link/$path"
         )
-        callback(
-            newExtractorLink(
-                source = name,
-                name = "Server 2 — vidcore.net",
-                url = "https://vidcore.net/$path?autoPlay=true"
-            ) { this.referer = "$mainUrl/" }
-        )
-        callback(
-            newExtractorLink(
-                source = name,
-                name = "Server 3 — videasy.net",
-                url = "https://player.videasy.net/$path"
-            ) { this.referer = "$mainUrl/" }
-        )
-        callback(
-            newExtractorLink(
-                source = name,
-                name = "Server 4 — vidfast.vc",
-                url = "https://vidfast.vc/$path?autoPlay=true"
-            ) { this.referer = "$mainUrl/" }
-        )
-        callback(
-            newExtractorLink(
-                source = name,
-                name = "Server 5 — vidsrc-embed.ru",
-                url = "https://vidsrc-embed.ru/embed/$path"
-            ) { this.referer = "$mainUrl/" }
-        )
-        callback(
-            newExtractorLink(
-                source = name,
-                name = "Server 6 — embedmaster.link",
-                url = "https://embedmaster.link/$path"
-            ) { this.referer = "$mainUrl/" }
-        )
+
+        servers.forEach { (name, url) ->
+            // Try to resolve iframe via built-in extractors
+            loadExtractor(url, "$mainUrl/", subtitleCallback) { link ->
+                callback.invoke(link)
+            }
+            
+            // Fallback: Provide direct link in case auto-resolve fails
+            callback(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = url
+                ) { this.referer = "$mainUrl/" }
+            )
+        }
 
         return true
     }
