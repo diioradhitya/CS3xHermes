@@ -217,9 +217,12 @@ class Sflix : MainAPI() {
         } else ""
 
         val path = if (isTv) "tv/$tmdbId$seasonEpisode" else "movie/$tmdbId"
-        val embedSu = "https://embed.su/embed/${if (isTv) "tv" else "movie"}/$tmdbId$seasonEpisode"
         
-        loadExtractor(embedSu, "https://embed.su/", subtitleCallback, callback)
+        // Scrap iframe langsung dari situs ssflix.pro
+        val document = app.get(data).document
+        val iframe = document.selectFirst("iframe")?.attr("src") ?: return false
+        
+        loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
 
         return true
     }
