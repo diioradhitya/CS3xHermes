@@ -23,7 +23,18 @@ class Harufilm : MainAPI() {
         @JsonProperty("title") val title: String? = null,
         @JsonProperty("slug") val slug: String? = null,
         @JsonProperty("poster") val poster: String? = null,
-        @JsonProperty("type") val type: String? = null
+        @JsonProperty("thumbnail_url") val thumbnail: String? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("description") val description: String? = null,
+        @JsonProperty("year") val year: Int? = null,
+        @JsonProperty("rating") val rating: Double? = null,
+        @JsonProperty("video_sources") val sources: List<HaruSource>? = null
+    )
+
+    data class HaruSource(
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("video_url") val video_url: String? = null,
+        @JsonProperty("embed_code") val embed_code: String? = null
     )
 
     data class HaruResponse(
@@ -32,29 +43,22 @@ class Harufilm : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val endpoint = when(request.data) {
-            "movies" -> "movies"
-            "series" -> "series"
-            "anime" -> "anime"
-            else -> "movies"
-        }
+        val endpoint = request.data
         val url = "$apiUrl/$endpoint?page=$page"
         val res = app.get(url).parsedSafe<HaruResponse>()
         val list = res?.data ?: res?.results ?: emptyList()
 
         val items = list.mapNotNull { item ->
             val title = item.title ?: return@mapNotNull null
-            val href = "$mainUrl/detail/${item.slug ?: item.id}"
-            val poster = item.poster
-            val isTv = item.type?.lowercase()?.contains("series") == true
-
-            if (isTv) {
+            val href = "$apiUrl/movies/${item.id}"
+            
+            if (item.type?.contains("series", true) == true) {
                 newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                    this.posterUrl = poster
+                    this.posterUrl = item.poster ?: item.thumbnail
                 }
             } else {
                 newMovieSearchResponse(title, href, TvType.Movie) {
-                    this.posterUrl = poster
+                    this.posterUrl = item.poster ?: item.thumbnail
                 }
             }
         }
@@ -62,10 +66,20 @@ class Harufilm : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        // Placeholder detail dulu
-        val title = "Harufilm Title"
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
-            posterUrl = ""
+        val item = app.get(url).parsed<HaruItem>()
+        
+        return if (item.type?.contains("series", true) == true) {
+            newTvSeriesLoadResponse(item.title ?: "", url, TvType.TvSeries, emptyList()) {
+                posterUrl = item.poster ?: item.thumbnail
+                plot = item.description
+                year = item.year
+            }
+        } else {
+            newMovieLoadResponse(item.title ?: "", url, TvType.Movie, url) {
+                posterUrl = item.poster ?: item.thumbnail
+                plot = item.description
+                year = item.year
+            }
         }
     }
 
@@ -75,6 +89,15 @@ class Harufilm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        val item = app.get(data).parsed<HaruItem>()
+        item.sources?.forEach { source ->
+            source.embed_code?.let { code ->
+                val src = Regex("src=\"(.*?)\"").find(code)?.groupValues?.get(1)
+                if (src != null) {
+                    loadExtractor(src, mainUrl, subtitleCallback, callback)
+                }
+            }
+        }
         return true
     }
 }
