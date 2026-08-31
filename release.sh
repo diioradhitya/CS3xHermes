@@ -169,7 +169,7 @@ if [[ $COMMIT_ONLY -eq 0 ]]; then
     \"internalName\": \"$plugin\",
     \"description\": \"${desc:-\"🎬 $plugin - Streaming plugin\"}\",
     \"url\": \"https://raw.githubusercontent.com/diioradhitya/CS3xHermes/${VERSION}/builds/${VERSION}/${plugin}.cs3\",
-    \"name\": \"$plugin\"
+    \"name\": \"${plugin}xHermes\"
   }"
     first=0
   done

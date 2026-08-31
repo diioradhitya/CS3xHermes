@@ -1,7 +1,7 @@
 version = 1
 
 cloudstream {
-    description = "Kawanfilm - Streaming Movie Sub Indo"
+    description = "KawanfilmxHermes - Streaming Movie Sub Indo"
     language = "id"
     authors = listOf("Asm0d3usX")
     status = 1
