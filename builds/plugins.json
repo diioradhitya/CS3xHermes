@@ -14,7 +14,7 @@
       "TvSeries",
       "Movie"
     ],
-    "version": 108,
+    "version": 110,
     "internalName": "Kawanfilm",
     "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.31.11/builds/v2026.08.31.11/Kawanfilm.cs3",
@@ -35,7 +35,7 @@
       "AsianDrama",
       "Movie"
     ],
-    "version": 108,
+    "version": 110,
     "internalName": "Oploverz",
     "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.31.11/builds/v2026.08.31.11/Oploverz.cs3",
@@ -55,7 +55,7 @@
       "Movie",
       "TvSeries"
     ],
-    "version": 108,
+    "version": 110,
     "internalName": "Sflix",
     "description": "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.31.11/builds/v2026.08.31.11/Sflix.cs3",
