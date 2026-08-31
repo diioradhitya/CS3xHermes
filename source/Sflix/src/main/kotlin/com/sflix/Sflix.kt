@@ -217,9 +217,9 @@ class Sflix : MainAPI() {
         } else ""
 
         val path = if (isTv) "tv/$tmdbId$seasonEpisode" else "movie/$tmdbId"
-        val vidsrc = if (isTv) "https://vidsrc.cc/v2/embed/tv/$tmdbId$seasonEpisode" else "https://vidsrc.cc/v2/embed/movie/$tmdbId"
-
-        loadExtractor(vidsrc, "$mainUrl/", subtitleCallback, callback)
+        val embedSu = "https://embed.su/embed/${if (isTv) "tv" else "movie"}/$tmdbId$seasonEpisode"
+        
+        loadExtractor(embedSu, "https://embed.su/", subtitleCallback, callback)
 
         return true
     }
