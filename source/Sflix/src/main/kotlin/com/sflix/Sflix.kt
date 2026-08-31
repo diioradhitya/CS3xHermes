@@ -219,28 +219,16 @@ class Sflix : MainAPI() {
         val path = if (isTv) "tv/$tmdbId$seasonEpisode" else "movie/$tmdbId"
 
         val servers = listOf(
-            "Server 1 — moviesapi.to" to "https://moviesapi.to/$path",
-            "Server 2 — vidcore.net" to "https://vidcore.net/$path?autoPlay=true",
-            "Server 3 — videasy.net" to "https://player.videasy.net/$path",
-            "Server 4 — vidfast.vc" to "https://vidfast.vc/$path?autoPlay=true",
-            "Server 5 — vidsrc-embed.ru" to "https://vidsrc-embed.ru/embed/$path",
-            "Server 6 — embedmaster.link" to "https://embedmaster.link/$path"
+            "moviesapi.to" to "https://moviesapi.to/$path",
+            "vidcore.net" to "https://vidcore.net/$path?autoPlay=true",
+            "videasy.net" to "https://player.videasy.net/$path",
+            "vidfast.vc" to "https://vidfast.vc/$path?autoPlay=true",
+            "vidsrc-embed.ru" to "https://vidsrc-embed.ru/embed/$path",
+            "embedmaster.link" to "https://embedmaster.link/$path"
         )
 
         servers.forEach { (name, url) ->
-            // Try to resolve iframe via built-in extractors
-            loadExtractor(url, "$mainUrl/", subtitleCallback) { link ->
-                callback.invoke(link)
-            }
-            
-            // Fallback: Provide direct link in case auto-resolve fails
-            callback(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = url
-                ) { this.referer = "$mainUrl/" }
-            )
+            loadExtractor(url, "$mainUrl/", subtitleCallback, callback)
         }
 
         return true
