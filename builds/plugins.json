@@ -6,8 +6,14 @@
     "fileSize": 39393,
     "status": 1,
     "language": "id",
-    "authors": ["Dio R"],
-    "tvTypes": ["AsianDrama", "TvSeries", "Movie"],
+    "authors": [
+      "Dio R"
+    ],
+    "tvTypes": [
+      "AsianDrama",
+      "TvSeries",
+      "Movie"
+    ],
     "version": 101,
     "internalName": "Kawanfilm",
     "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
@@ -21,8 +27,14 @@
     "fileSize": 38166,
     "status": 1,
     "language": "id",
-    "authors": ["Dio R"],
-    "tvTypes": ["Anime", "AsianDrama", "Movie"],
+    "authors": [
+      "Dio R"
+    ],
+    "tvTypes": [
+      "Anime",
+      "AsianDrama",
+      "Movie"
+    ],
     "version": 101,
     "internalName": "Oploverz",
     "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
@@ -36,8 +48,13 @@
     "fileSize": 50492,
     "status": 1,
     "language": "id",
-    "authors": ["Dio R"],
-    "tvTypes": ["Movie", "TvSeries"],
+    "authors": [
+      "Dio R"
+    ],
+    "tvTypes": [
+      "Movie",
+      "TvSeries"
+    ],
     "version": 101,
     "internalName": "Sflix",
     "description": "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts",
