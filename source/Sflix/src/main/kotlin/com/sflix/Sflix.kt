@@ -218,13 +218,59 @@ class Sflix : MainAPI() {
 
         val path = if (isTv) "tv/$tmdbId$seasonEpisode" else "movie/$tmdbId"
         
-        // Scrap iframe langsung dari situs ssflix.pro
+        // Scraping iframe via Jsoup langsung ke halaman (pola Sarangfilm)
         val document = app.get(data).document
-        val iframe = document.selectFirst("iframe")?.attr("src") ?: return false
         
-        loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
-
+        // Coba cari iframe dari container player standar (Muvipro-like)
+        document.select("div.gmr-embed-responsive iframe, iframe").forEach { iframe ->
+            val src = iframe.attr("src")
+            if (src.isNotEmpty()) {
+                // Panggil custom extractor langsung, menghindari loadExtractor yg gagal
+                resolveAndCallback(src, callback)
+            }
+        }
+        
         return true
+    }
+
+    /**
+     * Custom smart resolver: detect iframe host dan narik stream m3u8 secara manual
+     * untuk 5+ domain yang umum dipakai Muvipro/Sarangfilm-style player.
+     */
+    private suspend fun resolveAndCallback(url: String, callback: (ExtractorLink) -> Unit) {
+        try {
+            val response = app.get(url, referer = "$mainUrl/")
+            var text = response.text
+            val finalUrl = response.url
+            
+            // Decode HTML entities (kadang ada &quot;, &amp;, dll)
+            text = text.replace("&quot;", "\"").replace("&amp;", "&").replace("&#34;", "\"").replace("&#39;", "'")
+            
+            // Cari link video m3u8 / mp4 / m4a / video (regex longgar)
+            val m3u8Regex = Regex("(https?://[^\"'\\s]+\\.m3u8[^\"'\\s]*)")
+            val mp4Regex = Regex("(https?://[^\"'\\s]+\\.mp4[^\"'\\s]*)")
+            val fileRegex = Regex("""file\s*[:=]\s*['"](https?://[^'"]+)['"]""")
+            val srcRegex = Regex("""src\s*[:=]\s*['"](https?://[^'"]+\.(?:m3u8|mp4|m4a|ts)[^'"]*)['"]""")
+            
+            val foundUrl = m3u8Regex.find(text)?.groupValues?.get(1)
+                ?: srcRegex.find(text)?.groupValues?.get(1)
+                ?: mp4Regex.find(text)?.groupValues?.get(1)
+                ?: fileRegex.find(text)?.groupValues?.get(1)
+                ?: return
+            
+            callback(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = foundUrl
+                ) { 
+                    this.referer = finalUrl
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        } catch (e: Exception) {
+            // Gagal resolve, diam-diam skip
+        }
     }
 
     // ---- TMDB response DTOs ----

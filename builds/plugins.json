@@ -6,15 +6,9 @@
     "fileSize": 39393,
     "status": 1,
     "language": "id",
-    "authors": [
-      "Dio R"
-    ],
-    "tvTypes": [
-      "AsianDrama",
-      "TvSeries",
-      "Movie"
-    ],
-    "version": 106,
+    "authors": ["Dio R"],
+    "tvTypes": ["AsianDrama", "TvSeries", "Movie"],
+    "version": 11,
     "internalName": "Kawanfilm",
     "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.31.11/builds/v2026.08.31.11/Kawanfilm.cs3",
@@ -27,15 +21,9 @@
     "fileSize": 38166,
     "status": 1,
     "language": "id",
-    "authors": [
-      "Dio R"
-    ],
-    "tvTypes": [
-      "Anime",
-      "AsianDrama",
-      "Movie"
-    ],
-    "version": 106,
+    "authors": ["Dio R"],
+    "tvTypes": ["Anime", "AsianDrama", "Movie"],
+    "version": 11,
     "internalName": "Oploverz",
     "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.31.11/builds/v2026.08.31.11/Oploverz.cs3",
@@ -45,17 +33,12 @@
     "iconUrl": "https://www.google.com/s2/favicons?domain=Sflix&sz=%size%",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 50794,
+    "fileSize": 53103,
     "status": 1,
     "language": "id",
-    "authors": [
-      "Dio R"
-    ],
-    "tvTypes": [
-      "Movie",
-      "TvSeries"
-    ],
-    "version": 106,
+    "authors": ["Dio R"],
+    "tvTypes": ["Movie", "TvSeries"],
+    "version": 11,
     "internalName": "Sflix",
     "description": "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.08.31.11/builds/v2026.08.31.11/Sflix.cs3",
