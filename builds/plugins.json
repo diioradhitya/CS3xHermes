@@ -65,7 +65,7 @@
     "iconUrl": "https://www.google.com/s2/favicons?domain=Harufilm&sz=%size%",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 0,
+    "fileSize": 63488,
     "status": 1,
     "language": "id",
     "authors": [
@@ -81,6 +81,6 @@
     "internalName": "Harufilm",
     "description": "HarufilmxHermes - Streaming Film dan Series Indonesia",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Harufilm.cs3",
-    "name": "HarufilmxHermes"
+    "name": "Harufilm"
   }
 ]
