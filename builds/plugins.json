@@ -8,11 +8,41 @@
     "language": "id",
     "authors": ["Dio R"],
     "tvTypes": ["Movie", "TvSeries", "Anime"],
-    "version": 1,
+    "version": 2,
     "internalName": "Harufilm",
     "description": "Harufilm - Streaming Film Indonesia",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.02.1/builds/v2026.09.02.1/Harufilm.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.02.2/builds/v2026.09.02.2/Harufilm.cs3",
     "name": "HarufilmxHermes"
+  },
+  {
+    "iconUrl": "https://www.google.com/s2/favicons?domain=Kawanfilm&sz=%size%",
+    "apiVersion": 1,
+    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+    "fileSize": 39375,
+    "status": 1,
+    "language": "id",
+    "authors": ["Dio R"],
+    "tvTypes": ["AsianDrama", "TvSeries", "Movie"],
+    "version": 2,
+    "internalName": "Kawanfilm",
+    "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.02.2/builds/v2026.09.02.2/Kawanfilm.cs3",
+    "name": "KawanfilmxHermes"
+  },
+  {
+    "iconUrl": "https://www.google.com/s2/favicons?domain=Oploverz&sz=%size%",
+    "apiVersion": 1,
+    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+    "fileSize": 38157,
+    "status": 1,
+    "language": "id",
+    "authors": ["Dio R"],
+    "tvTypes": ["Anime", "AsianDrama", "Movie"],
+    "version": 2,
+    "internalName": "Oploverz",
+    "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.02.2/builds/v2026.09.02.2/Oploverz.cs3",
+    "name": "OploverzxHermes"
   },
   {
     "iconUrl": "https://www.google.com/s2/favicons?domain=Sflix&sz=%size%",
@@ -23,10 +53,10 @@
     "language": "id",
     "authors": ["Dio R"],
     "tvTypes": ["Movie", "TvSeries"],
-    "version": 1,
+    "version": 2,
     "internalName": "Sflix",
     "description": "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.02.1/builds/v2026.09.02.1/Sflix.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.02.2/builds/v2026.09.02.2/Sflix.cs3",
     "name": "SflixxHermes"
   }
 ]
