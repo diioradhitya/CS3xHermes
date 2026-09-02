@@ -65,7 +65,7 @@
     "iconUrl": "https://www.google.com/s2/favicons?domain=Harufilm&sz=%size%",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 36369,
+    "fileSize": 20592,
     "status": 1,
     "language": "id",
     "authors": [
@@ -77,7 +77,7 @@
       "Anime",
       "AsianDrama"
     ],
-    "version": 11,
+    "version": 12,
     "internalName": "Harufilm",
     "description": "Harufilm - Film Indonesia (Movies, Series, Anime) via API Worker",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Harufilm.cs3",
