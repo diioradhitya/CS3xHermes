@@ -24,6 +24,8 @@ MASTER_PACKAGE="com.cs3xhermes.extractors"
 # add them here too so release.sh doesn't try to build them.
 DISABLED_PLUGINS=(
     "Dutamovie"
+    "Kawanfilm"
+    "Oploverz"
     "Filmkita"
     "Filmlokal"
     "Indomax"
