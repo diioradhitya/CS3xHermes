@@ -8,5 +8,10 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class HarufilmPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(HarufilmProvider())
+
+        // Custom HaruStream + HaruPlayer extractors (in HaruExtractors.kt —
+        // separate file so release.sh doesn't overwrite them)
+        registerExtractorAPI(HaruStreamExtractor())
+        registerExtractorAPI(HaruPlayerExtractor())
     }
 }
