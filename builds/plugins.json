@@ -3,7 +3,7 @@
         "iconUrl": "https://www.google.com/s2/favicons?domain=Harufilm&sz=%size%",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 39536,
+        "fileSize": 41172,
         "status": 1,
         "language": "id",
         "authors": [
@@ -17,7 +17,7 @@
         "version": 12,
         "internalName": "Harufilm",
         "description": "Harufilm - Streaming Film Indonesia",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.03.1/builds/v2026.09.03.1/Harufilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.2/Harufilm.cs3",
         "name": "HarufilmxHermes"
     },
     {
@@ -38,7 +38,7 @@
         "version": 111,
         "internalName": "Kawanfilm",
         "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.03.1/builds/v2026.09.03.1/Kawanfilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.2/Kawanfilm.cs3",
         "name": "KawanfilmxHermes"
     },
     {
@@ -59,7 +59,7 @@
         "version": 111,
         "internalName": "Oploverz",
         "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.03.1/builds/v2026.09.03.1/Oploverz.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.2/Oploverz.cs3",
         "name": "OploverzxHermes"
     },
     {
@@ -79,7 +79,7 @@
         "version": 2,
         "internalName": "Sflix",
         "description": "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/v2026.09.03.1/builds/v2026.09.03.1/Sflix.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.2/Sflix.cs3",
         "name": "SflixxHermes"
     }
 ]
