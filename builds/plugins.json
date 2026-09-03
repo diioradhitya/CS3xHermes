@@ -3,7 +3,7 @@
     "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=64",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 41617,
+    "fileSize": 41751,
     "status": 1,
     "language": "id",
     "authors": [
@@ -14,10 +14,10 @@
       "Movie",
       "TvSeries"
     ],
-    "version": 13,
+    "version": 14,
     "internalName": "Harufilm",
     "description": "Harufilm streaming by Hermes",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.3/Harufilm.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.4/Harufilm.cs3",
     "name": "Harufilm"
   },
   {
@@ -37,7 +37,7 @@
     "version": 112,
     "internalName": "Kawanfilm",
     "description": "Kawanfilm streaming by Hermes",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.3/Kawanfilm.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.4/Kawanfilm.cs3",
     "name": "Kawanfilm"
   },
   {
@@ -57,7 +57,7 @@
     "version": 112,
     "internalName": "Oploverz",
     "description": "Oploverz streaming by Hermes",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.3/Oploverz.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.4/Oploverz.cs3",
     "name": "Oploverz"
   },
   {
@@ -77,7 +77,7 @@
     "version": 3,
     "internalName": "Sflix",
     "description": "SSFlix streaming by Hermes",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.3/Sflix.cs3",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.4/Sflix.cs3",
     "name": "Sflix"
   }
 ]
