@@ -1,34 +1,87 @@
 [
     {
-        "name": "Harufilm",
         "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=64",
+        "fileHash": "sha256-b9af9cc0af4d352f6a3bfa97f3c56ae025694c24e3407fbf9e2016b644b96bcc",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 41762,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Dio R"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Anime"
+        ],
+        "version": 1,
+        "internalName": "HarufilmProvider",
+        "description": "Harufilm - Streaming Film Indonesia",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/HarufilmProvider.cs3",
-        "version": 1,
-        "versionName": "v1",
-        "lang": "id"
+        "name": "HarufilmProvider"
     },
     {
-        "name": "Kawanfilm",
-        "iconUrl": "https://www.google.com/s2/favicons?domain=kawanfilm.org&sz=64",
+        "fileHash": "sha256-4815850b18d570315e84cc621c035a5dd3ea014cf2680aab35979f44693f4326",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 39393,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Asm0d3usX"
+        ],
+        "tvTypes": [
+            "AsianDrama",
+            "TvSeries",
+            "Movie"
+        ],
+        "version": 1,
+        "internalName": "KawanfilmProvider",
+        "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/KawanfilmProvider.cs3",
-        "version": 1,
-        "versionName": "v1",
-        "lang": "id"
+        "name": "KawanfilmProvider"
     },
     {
-        "name": "Oploverz",
-        "iconUrl": "https://www.google.com/s2/favicons?domain=oploverz.ac&sz=64",
+        "fileHash": "sha256-54d93904ef7cefc8f6b26c23c8e5282e04ccc5546c219b145cefe2a24975955b",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 38185,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Dio R"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AsianDrama",
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 1,
+        "internalName": "OploverzProvider",
+        "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/OploverzProvider.cs3",
-        "version": 1,
-        "versionName": "v1",
-        "lang": "id"
+        "name": "OploverzProvider"
     },
     {
-        "name": "Sflix",
-        "iconUrl": "https://www.google.com/s2/favicons?domain=ssflix.pro&sz=64",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/SflixProvider.cs3",
+        "fileHash": "sha256-44f753e1cd5b5f9d43ec4c079937aa0f7c0da21d2a7f9d4f36f4db2df28e39dd",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 61832,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Dio R"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
         "version": 1,
-        "versionName": "v1",
-        "lang": "id"
+        "internalName": "SflixProvider",
+        "description": "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/SflixProvider.cs3",
+        "name": "SflixProvider"
     }
 ]
