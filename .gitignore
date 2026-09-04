@@ -1,18 +1,21 @@
-# Build artifacts & deployment configs
+# Build artifacts
 build/
 .gradle/
+.kotlin/
 *.iml
+
+# IDE
 .idea/
+.vscode/
 .DS_Store
+
+# Local config (SDK path bervariasi per machine)
 local.properties
 
-# Secrets (file lives at ~/.gh_token outside this repo)
+# Secrets (jangan hardcode token di repo!)
 *.token
 *.key
 *.secret
-
-# Release script state
-.latest_version
 
 # OS
 Thumbs.db

@@ -10,8 +10,9 @@ class HarufilmPlugin : Plugin() {
         registerMainAPI(HarufilmProvider())
 
         // Custom HaruStream + HaruPlayer extractors (in HaruExtractors.kt —
-        // separate file so release.sh doesn't overwrite them)
+        // separate file so release.sh doesn"t overwrite them)
         registerExtractorAPI(HaruStreamExtractor())
+        registerExtractorAPI(HaruStreamEuCcExtractor())
         registerExtractorAPI(HaruPlayerExtractor())
     }
 }

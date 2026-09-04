@@ -62,28 +62,53 @@ class HarufilmProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        // Support both /movies/<id> (UUID) and /movies/<slug> or /anime/<slug>
         val id = Regex("/movies/([^/]+)").find(url)?.groupValues?.get(1)
-            ?: return newMovieLoadResponse("Unknown", url, TvType.Movie, url)
-        val detail = parseHaruDetail(app.get("$apiBase/movies/$id").text)
-            ?: return newMovieLoadResponse("Error", url, TvType.Movie, url)
-        val isSeries = detail.category?.lowercase() in listOf("series", "anime")
+        val slug = if (id == null) Regex("/(?:movies|anime|series)/([^/]+)").find(url)?.groupValues?.get(1) else null
+        val detail: HaruDetailLite?
+        val resolvedApiUrl: String
+        if (id != null) {
+            detail = parseHaruDetail(app.get("$apiBase/movies/$id").text)
+            resolvedApiUrl = "$apiBase/movies/$id"
+        } else if (slug != null) {
+            detail = parseHaruDetail(app.get("$apiBase/movies/$slug").text)
+            resolvedApiUrl = "$apiBase/movies/$slug"
+        } else {
+            return newMovieLoadResponse("Unknown", url, TvType.Movie, url)
+        }
+        detail ?: return newMovieLoadResponse("Error", url, TvType.Movie, url)
         val poster = detail.poster ?: detail.backdrop
-
-        // Playback URLs di-pass lewat data string berupa URL API detail
-        // sehingga loadLinks bisa fetch si embeds tanpa perlu tahu ID lagi.
-        val playbackData = "$apiBase/movies/$id"
-
+        val playbackData = resolvedApiUrl
+        val epRegex = Regex("""S(\d+)\s*Eps\s*(\d+)""", RegexOption.IGNORE_CASE)
+        // Series are identified by per-episode sources (titles like "S1 Eps 1"),
+        // NOT by category — anime films have the same category "anime" but a single
+        // "HaruStream" source and must be treated as movies (else 0 episodes -> "coming soon").
+        val isSeries = detail.sources?.any { epRegex.find(it.title ?: "") != null } == true
         if (isSeries) {
-            val episodes = detail.sources?.mapNotNull { src ->
-                val epTitle = src.title ?: return@mapNotNull null
-                val epNum = Regex("(\\d+)").findAll(epTitle).lastOrNull()?.value?.toIntOrNull()
-                // Simpel: pass API url, loadLinks ambil semua embeds.
-                newEpisode(playbackData) {
+            // Group sources into per-season episode lists
+            val seasons = mutableMapOf<String, MutableList<Episode>>()
+            detail.sources?.forEach { src ->
+                val epNum = epRegex
+                    .find(src.title ?: "")?.groupValues?.let { (_, s, e) -> Pair(s.toIntOrNull(), e.toIntOrNull()) }
+                val epTitle = src.title ?: return@forEach
+                if (epNum == null) return@forEach
+                val (sn, en) = epNum
+                val seasonKey = "Season $sn"
+                val ep = newEpisode(playbackData) {
                     name = epTitle
-                    episode = epNum
+                    episode = en
+                    season = sn
                     posterUrl = poster
                 }
-            } ?: emptyList()
+                val list = seasons.getOrPut(seasonKey) { mutableListOf() }
+                list.add(ep)
+            }
+            // Build sorted episode list respecting season order
+            val episodes = mutableListOf<Episode>()
+            val orderedKeys = seasons.keys.sortedWith(compareBy({ it.substringAfter("Season ").toIntOrNull() ?: 0 }))
+            orderedKeys.forEach { k ->
+                seasons[k]?.let { episodes.addAll(it) }
+            }
             return newTvSeriesLoadResponse(detail.title ?: "", url, TvType.TvSeries, episodes) {
                 posterUrl = poster
                 plot = detail.plot

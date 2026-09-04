@@ -1,83 +1,34 @@
 [
-  {
-    "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=64",
-    "apiVersion": 1,
-    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 41751,
-    "status": 1,
-    "language": "id",
-    "authors": [
-      "Hermes"
-    ],
-    "tvTypes": [
-      "Anime",
-      "Movie",
-      "TvSeries"
-    ],
-    "version": 14,
-    "internalName": "Harufilm",
-    "description": "Harufilm streaming by Hermes",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.4/Harufilm.cs3",
-    "name": "Harufilm"
-  },
-  {
-    "iconUrl": "https://www.google.com/s2/favicons?domain=kawanfilm21.id&sz=64",
-    "apiVersion": 1,
-    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 39375,
-    "status": 1,
-    "language": "id",
-    "authors": [
-      "Hermes"
-    ],
-    "tvTypes": [
-      "Movie",
-      "TvSeries"
-    ],
-    "version": 112,
-    "internalName": "Kawanfilm",
-    "description": "Kawanfilm streaming by Hermes",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.4/Kawanfilm.cs3",
-    "name": "Kawanfilm"
-  },
-  {
-    "iconUrl": "https://www.google.com/s2/favicons?domain=oploverz.in&sz=64",
-    "apiVersion": 1,
-    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 38157,
-    "status": 1,
-    "language": "id",
-    "authors": [
-      "Hermes"
-    ],
-    "tvTypes": [
-      "Anime",
-      "TvSeries"
-    ],
-    "version": 112,
-    "internalName": "Oploverz",
-    "description": "Oploverz streaming by Hermes",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.4/Oploverz.cs3",
-    "name": "Oploverz"
-  },
-  {
-    "iconUrl": "https://www.google.com/s2/favicons?domain=ssflix.pro&sz=64",
-    "apiVersion": 1,
-    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 61814,
-    "status": 1,
-    "language": "id",
-    "authors": [
-      "Hermes"
-    ],
-    "tvTypes": [
-      "Movie",
-      "TvSeries"
-    ],
-    "version": 3,
-    "internalName": "Sflix",
-    "description": "SSFlix streaming by Hermes",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/v2026.09.03.4/Sflix.cs3",
-    "name": "Sflix"
-  }
+    {
+        "name": "Harufilm",
+        "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=64",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/HarufilmProvider.cs3",
+        "version": 1,
+        "versionName": "v1",
+        "lang": "id"
+    },
+    {
+        "name": "Kawanfilm",
+        "iconUrl": "https://www.google.com/s2/favicons?domain=kawanfilm.org&sz=64",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/KawanfilmProvider.cs3",
+        "version": 1,
+        "versionName": "v1",
+        "lang": "id"
+    },
+    {
+        "name": "Oploverz",
+        "iconUrl": "https://www.google.com/s2/favicons?domain=oploverz.ac&sz=64",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/OploverzProvider.cs3",
+        "version": 1,
+        "versionName": "v1",
+        "lang": "id"
+    },
+    {
+        "name": "Sflix",
+        "iconUrl": "https://www.google.com/s2/favicons?domain=ssflix.pro&sz=64",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/SflixProvider.cs3",
+        "version": 1,
+        "versionName": "v1",
+        "lang": "id"
+    }
 ]

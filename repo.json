@@ -1,7 +1,7 @@
 {
-  "name": "Dio's CloudStream Repository",
-  "description": "Personal CloudStream plugins repository",
-  "iconUrl": "https://i.imgur.com/example.png",
+  "name": "CS3xHermes - Indonesian Stream Extensions",
+  "description": "CloudStream extensions for Indonesian streaming sites (Film, Anime, Drama)",
+  "iconUrl": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/banner.png",
   "manifestVersion": 1,
   "pluginLists": [
     "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/plugins.json"

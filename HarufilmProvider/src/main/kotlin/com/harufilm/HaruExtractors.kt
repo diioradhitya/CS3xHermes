@@ -1,6 +1,7 @@
 package com.harufilm
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
@@ -10,8 +11,16 @@ import com.lagradost.cloudstream3.utils.fixUrl
 /**
  * Harufilm custom streaming extractors.
  *
- * HaruStream / HaruPlayer pages expose a direct video via:
+ * HaruStream pages expose a direct video via:
  *   embed page -> window.streamUrl = "/stream/<id>" -> direct MKV URL
+ *
+ * The site uses several HaruStream host aliases that share the SAME structure:
+ *   - haru-stream.pages.dev
+ *   - harustream.eu.cc
+ * Each serves a plain HTML page with window.streamUrl = "/stream/<id>".
+ *
+ * HaruPlayer (embed4me.com): a JS/protected P2P player. Kept for embeddings that
+ * genuinely reference embed4me, but most anime episodes use HaruStream aliases.
  *
  * NOTE: separate filename so release.sh (which overwrites Extractors.kt
  * with the shared collection) does NOT clobber these.
@@ -61,7 +70,7 @@ abstract class HaruPageExtractor : ExtractorApi() {
             return
         }
 
-        // 3. Fallback: embed URL (CloudStream webview tries to play it)
+        // 3. Fallback: embed page URL — CloudStream WebView plays it natively
         callback(
             newExtractorLink(name, name, url) {
                 this.quality = Qualities.Unknown.value
@@ -70,12 +79,23 @@ abstract class HaruPageExtractor : ExtractorApi() {
     }
 }
 
+/** Movies: haru-stream.pages.dev */
 class HaruStreamExtractor : HaruPageExtractor() {
     override val name = "HaruStream"
     override val mainUrl = "https://haru-stream.pages.dev"
 }
 
-class HaruPlayerExtractor : HaruPageExtractor() {
-    override val name = "HaruPlayer"
-    override val mainUrl = "https://haru-player.pages.dev"
+/** Anime episodes (most): harustream.eu.cc — same HaruStream structure */
+class HaruStreamEuCcExtractor : HaruPageExtractor() {
+    override val name = "HaruStream"
+    override val mainUrl = "https://harustream.eu.cc"
+}
+
+/**
+ * Anime episodes (genuine embed4me): protected JS/P2P player. Keep VidStack
+ * fallback for the rare embeddings that reference haruplayer.embed4me.com.
+ */
+class HaruPlayerExtractor : VidStack() {
+    override var name = "HaruPlayer"
+    override var mainUrl = "https://haruplayer.embed4me.com"
 }
