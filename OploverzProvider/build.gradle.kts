@@ -1,4 +1,4 @@
-version = 1
+version = 6
 
 cloudstream {
     description = "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)"

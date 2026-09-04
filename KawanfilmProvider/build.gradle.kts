@@ -1,4 +1,4 @@
-version = 1
+version = 7
 
 cloudstream {
     description = "KawanfilmxHermes - Streaming Movie Sub Indo"

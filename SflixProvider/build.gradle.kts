@@ -1,4 +1,4 @@
-version = 1
+version = 3
 
 cloudstream {
     description = "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts"
