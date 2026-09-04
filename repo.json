@@ -1,9 +1,9 @@
 {
-  "name": "CS3xHermes - Indonesian Stream Extensions",
-  "description": "CloudStream extensions for Indonesian streaming sites (Film, Anime, Drama)",
-  "iconUrl": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/banner.png",
+  "name": "CS3xHermes",
+  "description": "Indonesian Stream Extensions",
+  "iconUrl": "https://www.google.com/s2/favicons?domain=cs3xhermes.github.io&sz=64",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/plugins.json"
+    "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/plugins.json"
   ]
 }
