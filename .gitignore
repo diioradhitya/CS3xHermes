@@ -1,18 +1,9 @@
 # Build artifacts
+*.class
+*.dex
+*.jar
+*.apk
 build/
 .gradle/
 .kotlin/
-*.iml
-
-# Local config (SDK path)
 local.properties
-
-# IDE
-.idea/
-.vscode/
-.DS_Store
-
-# Secrets
-*.token
-*.key
-*.secret
