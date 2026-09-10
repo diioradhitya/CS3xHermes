@@ -128,7 +128,8 @@
     "internalName": "KawanfilmProvider",
     "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/KawanfilmProvider.cs3",
-    "name": "KawanfilmProvider"
+    "name": "KawanfilmProvider",
+    "iconUrl": "https://www.google.com/s2/favicons?domain=tv2.kawanfilm21.co&sz=64"
   },
   {
     "fileHash": "sha256-59e1787ae3524107b3f2fd56e72a341c72f3ef8f6bfe843d9bbbc3212767aa43",
@@ -238,7 +239,8 @@
     "internalName": "OploverzProvider",
     "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/OploverzProvider.cs3",
-    "name": "OploverzProvider"
+    "name": "OploverzProvider",
+    "iconUrl": "https://www.google.com/s2/favicons?domain=anime.oploverz.ac&sz=64"
   },
   {
     "fileHash": "sha256-726f9f0d2a59628a5fe826324fca7507bc7258b36ca4f6029d5f0d06da2586d7",
@@ -367,7 +369,8 @@
     "internalName": "SflixProvider",
     "description": "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/SflixProvider.cs3",
-    "name": "SflixProvider"
+    "name": "SflixProvider",
+    "iconUrl": "https://www.google.com/s2/favicons?domain=ssflix.pro&sz=64"
   },
   {
     "fileHash": "sha256-f52e63d92ca7f3597d5e0075870c5bf2a0094b23abce86706a29b95cf282dc19",
