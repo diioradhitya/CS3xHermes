@@ -65,10 +65,10 @@
     "name": "OploverzProvider"
   },
   {
-    "fileHash": "sha256-8cc7ec6e2597dbf2bf73462b9fb3fc046a62a05ec880999aa7d36849494e8213",
+    "fileHash": "sha256-59ed8d0510aba385bbda4e71faf5e14362f3068f8055c5bb4e682e60a9838f8f",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 54817,
+    "fileSize": 20396,
     "status": 1,
     "language": "id",
     "authors": [
@@ -78,11 +78,11 @@
       "Movie",
       "TvSeries"
     ],
-    "version": 6,
+    "version": 7,
     "internalName": "SflixProvider",
-    "description": "SFlix - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)",
+    "description": "SFlix - Movie & TV Series via TMDB metadata + moviesapi.to Vidora HLS (direct .m3u8, subtitles)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/SflixProvider.cs3",
     "name": "SflixProvider",
-    "iconUrl": "https://www.google.com/s2/favicons?domain=insflix.biz&sz=64"
+    "iconUrl": "https://www.google.com/s2/favicons?domain=moviesapi.to&sz=64"
   }
 ]
