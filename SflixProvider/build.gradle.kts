@@ -1,7 +1,7 @@
 version = 3
 
 cloudstream {
-    description = "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts"
+    description = "SFlix - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)"
     language = "id"
     authors = listOf("Dio R")
     status = 1
