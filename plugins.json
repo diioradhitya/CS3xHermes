@@ -352,11 +352,10 @@
     "iconUrl": "https://www.google.com/s2/favicons?domain=new13.savefilm21info.com&sz=64"
   },
   {
-    "iconUrl": "https://www.google.com/s2/favicons?domain=insflix.biz&sz=64",
-    "fileHash": "sha256-8cc7ec6e2597dbf2bf73462b9fb3fc046a62a05ec880999aa7d36849494e8213",
+    "fileHash": "sha256-787eb4bcaaa5b6a6ec03260c58482813fe19ebbd24645ffa46cccf5c8625a324",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 54817,
+    "fileSize": 25142,
     "status": 1,
     "language": "id",
     "authors": [
@@ -366,10 +365,33 @@
       "Movie",
       "TvSeries"
     ],
-    "version": 6,
+    "version": 8,
     "internalName": "SflixProvider",
-    "description": "SFlix - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)",
+    "description": "SFlix - Movie & TV Series via TMDB metadata + moviesapi.to Vidora HLS (direct .m3u8, subtitles)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/SflixProvider.cs3",
-    "name": "SflixProvider"
+    "name": "SflixProvider",
+    "iconUrl": "https://www.google.com/s2/favicons?domain=moviesapi.to&sz=64"
+  },
+  {
+    "iconUrl": "https://www.google.com/s2/favicons?domain=wgfilm21.net&sz=64",
+    "fileHash": "sha256-f52e63d92ca7f3597d5e0075870c5bf2a0094b23abce86706a29b95cf282dc19",
+    "apiVersion": 1,
+    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+    "fileSize": 26206,
+    "status": 1,
+    "language": "id",
+    "authors": [
+      "Asm0d3usX"
+    ],
+    "tvTypes": [
+      "Movie",
+      "TvSeries",
+      "AsianDrama"
+    ],
+    "version": 1,
+    "internalName": "WGFilm21",
+    "description": "WGFilm21 - Streaming Movie Sub Indo",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/WGFilm21.cs3",
+    "name": "WGFilm21"
   }
 ]
