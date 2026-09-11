@@ -1,4 +1,4 @@
-version = 3
+version = 6
 
 cloudstream {
     description = "SFlix - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)"
