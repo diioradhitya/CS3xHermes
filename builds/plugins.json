@@ -1,1 +1,15 @@
-{"name": "SFlix", "version": 3, "description": "SFlix - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)", "language": "id", "authors": ["Dio R"], "status": 1, "tvTypes": ["Movie", "TvSeries"], "file": "SflixProvider.cs3"}
+{
+  "name": "SFlix",
+  "version": 3,
+  "description": "SFlix - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)",
+  "language": "id",
+  "authors": [
+    "Dio R"
+  ],
+  "status": 1,
+  "tvTypes": [
+    "Movie",
+    "TvSeries"
+  ],
+  "file": "SflixProvider.cs3"
+}
