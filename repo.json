@@ -4,6 +4,6 @@
   "iconUrl": "https://www.google.com/s2/favicons?domain=cs3xhermes.github.io&sz=64",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/plugins.json"
+    "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/plugins.json"
   ]
 }
