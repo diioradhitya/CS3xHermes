@@ -1,5 +1,6 @@
 [
   {
+    "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=64",
     "fileHash": "sha256-28351a4544ef7a8e610a44c02e5787758491ee1c2c19134b7e3436019c589681",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
@@ -258,7 +259,7 @@
     ],
     "version": 1,
     "internalName": "Pencurimovie",
-    "description": "Pencurimovie \u2014 Streaming Film & Serial",
+    "description": "Pencurimovie \\u2014 Streaming Film & Serial",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Pencurimovie.cs3",
     "name": "Pencurimovie",
     "iconUrl": "https://www.google.com/s2/favicons?domain=ww11.pencurimovie.sbs&sz=64"
@@ -352,10 +353,11 @@
     "iconUrl": "https://www.google.com/s2/favicons?domain=new13.savefilm21info.com&sz=64"
   },
   {
-    "fileHash": "sha256-fe960e768b34ec1a875a253471bfd67f7bd29abba93679b728441ccfdac2adfd",
+    "iconUrl": "https://www.google.com/s2/favicons?domain=ssflix.pro&sz=64",
+    "fileHash": "sha256-6c846c774738dd29aef80139f7864e88d5f98bb7eba1f18cd79b0de500733e73",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 61832,
+    "fileSize": 14910,
     "status": 1,
     "language": "id",
     "authors": [
@@ -367,31 +369,8 @@
     ],
     "version": 3,
     "internalName": "SflixProvider",
-    "description": "SFlixxHermes - Movie and TV Series via TMDB + 6 iframe hosts",
+    "description": "SFlixxHermes - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/SflixProvider.cs3",
-    "name": "SflixProvider",
-    "iconUrl": "https://www.google.com/s2/favicons?domain=ssflix.pro&sz=64"
-  },
-  {
-    "fileHash": "sha256-f52e63d92ca7f3597d5e0075870c5bf2a0094b23abce86706a29b95cf282dc19",
-    "apiVersion": 1,
-    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 26206,
-    "status": 1,
-    "language": "id",
-    "authors": [
-      "Asm0d3usX"
-    ],
-    "tvTypes": [
-      "Movie",
-      "TvSeries",
-      "AsianDrama"
-    ],
-    "version": 1,
-    "internalName": "WGFilm21",
-    "description": "WGFilm21 - Streaming Movie Sub Indo",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/WGFilm21.cs3",
-    "name": "WGFilm21",
-    "iconUrl": "https://www.google.com/s2/favicons?domain=alternatif3.wgfilm21.net&sz=64"
+    "name": "SflixProvider"
   }
 ]
