@@ -1,7 +1,7 @@
-version = 6
+version = 7
 
 cloudstream {
-    description = "SFlix - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)"
+    description = "SFlix — TMDB + moviesapi.to Vidora HLS"
     language = "id"
     authors = listOf("Dio R")
     status = 1
