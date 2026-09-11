@@ -2,13 +2,22 @@ package com.sflix
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * SFlix — Hybrid architecture:
  *   - TMDB API  → search, discover/popular, movie/tv details
  *   - moviesapi.to (Vidora API) → HLS stream URLs + subtitles
+ *
+ * v8: Card quality badge — probe Vidora API per title (cached, throttled)
  */
 class SflixProvider : MainAPI() {
     override var mainUrl = "https://moviesapi.to"
@@ -23,6 +32,9 @@ class SflixProvider : MainAPI() {
         private const val IMG_BASE = "https://image.tmdb.org/t/p/"
         private const val VIDORA_BASE = "https://moviesapi.to/api/vidora/v1"
         private const val VIDORA_KEY = "3a67e8866ae1d2bb9e81fe7f73315a56eb3bdf5e3e755c7554c8be6910aa6b13"
+
+        private val probeSemaphore = Semaphore(4)
+        private val qualityCache = ConcurrentHashMap<String, String>()
 
         private fun posterUrl(path: String?): String? = path?.let { "${IMG_BASE}w500$it" }
         private fun backdropUrl(path: String?): String? = path?.let { "${IMG_BASE}w1280$it" }
@@ -55,6 +67,79 @@ class SflixProvider : MainAPI() {
         }
     }
 
+    /**
+     * Probe Vidora API untuk kualitas tertinggi suatu judul → String label (mis. "1080p").
+     * Hasil di-cache per (type,id) agar hanya 1x probe per judul per sesi.
+     */
+    private suspend fun probeQuality(tmdbId: Int, isTv: Boolean): String? {
+        val key = (if (isTv) "t" else "m") + tmdbId
+        qualityCache[key]?.let { return it }
+
+        return withContext(Dispatchers.IO) {
+            probeSemaphore.withPermit {
+                try {
+                    val url = if (isTv) "$VIDORA_BASE/tv/$tmdbId/1/1" else "$VIDORA_BASE/movie/$tmdbId"
+                    val headers = mapOf(
+                        "x-player-key" to VIDORA_KEY,
+                        "Referer" to "https://moviesapi.to/",
+                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+                    )
+                    val response = app.get(url, headers = headers).text
+                    val json = try {
+                        JSONObject(response)
+                    } catch (e: Exception) {
+                        val start = response.indexOf("{")
+                        val end = response.lastIndexOf("}")
+                        if (start < 0 || end <= start) return@withPermit null
+                        JSONObject(response.substring(start, end + 1))
+                    }
+                    val sources = json.optJSONArray("sources") ?: return@withPermit null
+
+                    var bestLabel: String? = null
+                    var bestVal = Qualities.Unknown.value
+                    for (i in 0 until sources.length()) {
+                        val label = sources.getJSONObject(i).optString("quality")
+                        val v = mapQuality(label)
+                        if (v > bestVal) {
+                            bestVal = v
+                            bestLabel = label
+                        }
+                    }
+                    if (bestLabel != null) qualityCache[key] = bestLabel
+                    bestLabel
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        }
+    }
+
+    /** Bangun SearchResponse + probe kualitas untuk badge di card. */
+    private suspend fun toSearchResponse(obj: JSONObject, isTv: Boolean): SearchResponse? {
+        val id = obj.optInt("id")
+        val title = obj.optString("title").ifBlank { obj.optString("name") }
+        if (title.isNullOrBlank()) return null
+        val poster = posterUrl(obj.optString("poster_path", null))
+        val release = obj.optString("release_date").ifBlank { obj.optString("first_air_date") }
+        val type = if (isTv) "tv" else "movie"
+        val fakeUrl = "tmdb://$type/$id"
+        val quality = probeQuality(id, isTv)
+
+        return if (isTv) {
+            newTvSeriesSearchResponse(title, fakeUrl, TvType.TvSeries) {
+                this.posterUrl = poster
+                this.year = release.takeIf { it.length >= 4 }?.take(4)?.toIntOrNull()
+                if (quality != null) addQuality(quality)
+            }
+        } else {
+            newMovieSearchResponse(title, fakeUrl, TvType.Movie) {
+                this.posterUrl = poster
+                this.year = release.takeIf { it.length >= 4 }?.take(4)?.toIntOrNull()
+                if (quality != null) addQuality(quality)
+            }
+        }
+    }
+
     // ============================================================
     // MAIN PAGES — TMDB discover
     // ============================================================
@@ -77,27 +162,10 @@ class SflixProvider : MainAPI() {
         val json = JSONObject(body)
         val results = json.optJSONArray("results") ?: return newHomePageResponse(request.name, emptyList())
 
-        val items = (0 until results.length()).mapNotNull { i ->
-            val obj = results.getJSONObject(i)
-            val id = obj.optInt("id")
-            val title = obj.optString("title").ifBlank { obj.optString("name") }
-            if (title.isNullOrBlank()) return@mapNotNull null
-            val poster = posterUrl(obj.optString("poster_path", null))
-            val release = obj.optString("release_date").ifBlank { obj.optString("first_air_date") }
-            val type = if (isTv) "tv" else "movie"
-            val fakeUrl = "tmdb://$type/$id"
-
-            if (isTv) {
-                newTvSeriesSearchResponse(title, fakeUrl, TvType.TvSeries) {
-                    this.posterUrl = poster
-                    this.year = release.takeIf { it.length >= 4 }?.take(4)?.toIntOrNull()
-                }
-            } else {
-                newMovieSearchResponse(title, fakeUrl, TvType.Movie) {
-                    this.posterUrl = poster
-                    this.year = release.takeIf { it.length >= 4 }?.take(4)?.toIntOrNull()
-                }
-            }
+        val items = coroutineScope {
+            (0 until results.length()).map { i ->
+                async { toSearchResponse(results.getJSONObject(i), isTv) }
+            }.mapNotNull { it.await() }
         }
 
         return newHomePageResponse(
@@ -115,30 +183,15 @@ class SflixProvider : MainAPI() {
         val json = JSONObject(body)
         val results = json.optJSONArray("results") ?: return emptyList()
 
-        return (0 until results.length()).mapNotNull { i ->
-            val obj = results.getJSONObject(i)
-            val mediaType = obj.optString("media_type")
-            if (mediaType != "movie" && mediaType != "tv") return@mapNotNull null
-
-            val id = obj.optInt("id")
-            val title = obj.optString("title").ifBlank { obj.optString("name") }
-            if (title.isNullOrBlank()) return@mapNotNull null
-
-            val poster = posterUrl(obj.optString("poster_path", null))
-            val release = obj.optString("release_date").ifBlank { obj.optString("first_air_date") }
-            val fakeUrl = "tmdb://$mediaType/$id"
-
-            if (mediaType == "tv") {
-                newTvSeriesSearchResponse(title, fakeUrl, TvType.TvSeries) {
-                    this.posterUrl = poster
-                    this.year = release.takeIf { it.length >= 4 }?.take(4)?.toIntOrNull()
+        return coroutineScope {
+            (0 until results.length()).map { i ->
+                async {
+                    val obj = results.getJSONObject(i)
+                    val mediaType = obj.optString("media_type")
+                    if (mediaType != "movie" && mediaType != "tv") return@async null
+                    toSearchResponse(obj, mediaType == "tv")
                 }
-            } else {
-                newMovieSearchResponse(title, fakeUrl, TvType.Movie) {
-                    this.posterUrl = poster
-                    this.year = release.takeIf { it.length >= 4 }?.take(4)?.toIntOrNull()
-                }
-            }
+            }.mapNotNull { it.await() }
         }
     }
 
