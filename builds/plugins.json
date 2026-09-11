@@ -1,6 +1,6 @@
 {
   "name": "SFlix",
-  "version": 3,
+  "version": 6,
   "description": "SFlix - Movie and TV Series from insflix.biz (direct scrape, MP4 direct)",
   "language": "id",
   "authors": [
@@ -11,5 +11,9 @@
     "Movie",
     "TvSeries"
   ],
-  "file": "SflixProvider.cs3"
+  "file": "SflixProvider.cs3",
+  "fileHash": "sha256-8cc7ec6e2597dbf2bf73462b9fb3fc046a62a05ec880999aa7d36849494e8213",
+  "fileSize": 54817,
+  "iconUrl": "https://www.google.com/s2/favicons?domain=insflix.biz&sz=64",
+  "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/SflixProvider.cs3"
 }
