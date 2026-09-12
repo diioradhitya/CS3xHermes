@@ -1,4 +1,4 @@
-version = 9
+version = 10
 
 cloudstream {
     description = "SFlix — TMDB + moviesapi.to Vidora HLS"

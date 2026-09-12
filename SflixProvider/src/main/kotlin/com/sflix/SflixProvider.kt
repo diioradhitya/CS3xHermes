@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
  *   - TMDB API  → search, discover/popular, movie/tv details
  *   - moviesapi.to (Vidora API) → HLS stream URLs + subtitles
  *
- * v9: Card quality badge — fetch master.m3u8 per title (cached, throttled)
+ * v10: Quality badge — probe 1x master.m3u8; TV fallback ke season terakhir
  */
 class SflixProvider : MainAPI() {
     override var mainUrl = "https://moviesapi.to"
@@ -66,26 +66,27 @@ class SflixProvider : MainAPI() {
             }
         }
 
-        /** Parse master.m3u8 → highest resolution label ("4K"/"FHD"/"HD"/"SD"). */
+        /** Parse master.m3u8 → highest resolution label by WIDTH tier ("4K"/"FHD"/"HD"/"SD"). */
         private fun parseMasterResolution(playlist: String): String? {
-            var bestHeight = 0
-            Regex("""RESOLUTION=\d+x(\d+)""").findAll(playlist).forEach { match ->
-                val h = match.groupValues[1].toIntOrNull() ?: 0
-                if (h > bestHeight) bestHeight = h
+            var bestWidth = 0
+            Regex("""RESOLUTION=(\d+)x\d+""").findAll(playlist).forEach { match ->
+                val w = match.groupValues[1].toIntOrNull() ?: 0
+                if (w > bestWidth) bestWidth = w
             }
-            if (bestHeight == 0) return null
+            if (bestWidth == 0) return null
             return when {
-                bestHeight >= 2160 -> "4K"
-                bestHeight >= 1080 -> "FHD"
-                bestHeight >= 720  -> "HD"
-                bestHeight >= 480  -> "SD"
-                else -> "${bestHeight}p"
+                bestWidth >= 3840 -> "4K"
+                bestWidth >= 1920 -> "FHD"
+                bestWidth >= 1280 -> "HD"
+                bestWidth >= 854  -> "SD"
+                else -> "${bestWidth}p"
             }
         }
     }
 
     /**
-     * Probe kualitas: fetch master.m3u8 → parse RESOLUTION → label ("FHD"/"HD"/etc).
+     * Probe kualitas tertinggi: fetch master.m3u8 → parse RESOLUTION → label.
+     * TV: coba E1S1 dulu; kalau kosong fallback ke season terakhir (Reacher dkk).
      * Hasil di-cache per (type,id) agar hanya 1x probe per judul per sesi.
      */
     private suspend fun probeQuality(tmdbId: Int, isTv: Boolean): String? {
@@ -95,38 +96,71 @@ class SflixProvider : MainAPI() {
         return withContext(Dispatchers.IO) {
             probeSemaphore.withPermit {
                 try {
-                    // Step 1: Get source URL from Vidora API
-                    val url = if (isTv) "$VIDORA_BASE/tv/$tmdbId/1/1" else "$VIDORA_BASE/movie/$tmdbId"
-                    val headers = mapOf(
-                        "x-player-key" to VIDORA_KEY,
-                        "Referer" to "https://moviesapi.to/",
-                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-                    )
-                    val response = app.get(url, headers = headers).text
-                    val json = try {
-                        JSONObject(response)
-                    } catch (e: Exception) {
-                        val start = response.indexOf("{")
-                        val end = response.lastIndexOf("}")
-                        if (start < 0 || end <= start) return@withPermit null
-                        JSONObject(response.substring(start, end + 1))
+                    val candidates = if (isTv) {
+                        val list = mutableListOf("tv/$tmdbId/1/1")
+                        lastSeason(tmdbId)?.takeIf { it > 1 }?.let { list.add("tv/$tmdbId/$it/1") }
+                        list
+                    } else {
+                        mutableListOf("movie/$tmdbId")
                     }
-                    val sourceUrl = json.optJSONArray("sources")
-                        ?.optJSONObject(0)
-                        ?.optString("url")
-                        ?.takeIf { it.contains(".m3u8") }
-                        ?: return@withPermit null
-
-                    // Step 2: Fetch master playlist (follows redirects), parse resolution
-                    val masterResponse = app.get(sourceUrl, headers = headers).text
-                    val qualityLabel = parseMasterResolution(masterResponse)
-                    if (qualityLabel != null) qualityCache[key] = qualityLabel
-                    qualityLabel
+                    for (endpoint in candidates.distinct()) {
+                        val sourceUrl = vidoraSourceUrl("$VIDORA_BASE/$endpoint") ?: continue
+                        val label = probeMasterLabel(sourceUrl)
+                        if (label != null) {
+                            qualityCache[key] = label
+                            return@withPermit label
+                        }
+                    }
+                    null
                 } catch (_: Exception) {
                     null
                 }
             }
         }
+    }
+
+    private val vidoraHeaders = mapOf(
+        "x-player-key" to VIDORA_KEY,
+        "Referer" to "https://moviesapi.to/",
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+    )
+
+    /** Ambil URL source pertama dari Vidora API (null kalau ga ada link). */
+    private suspend fun vidoraSourceUrl(endpoint: String): String? {
+        val response = app.get(endpoint, headers = vidoraHeaders).text
+        val json = try {
+            JSONObject(response)
+        } catch (e: Exception) {
+            val start = response.indexOf("{")
+            val end = response.lastIndexOf("}")
+            if (start < 0 || end <= start) return null
+            JSONObject(response.substring(start, end + 1))
+        }
+        if (!json.optBoolean("result", false)) return null
+        return json.optJSONArray("sources")
+            ?.optJSONObject(0)
+            ?.optString("url")
+            ?.takeIf { it.contains(".m3u8") }
+    }
+
+    /** Fetch master playlist (follows CDN redirects) → parse quality label. */
+    private suspend fun probeMasterLabel(sourceUrl: String): String? {
+        val master = app.get(sourceUrl, headers = vidoraHeaders).text
+        return parseMasterResolution(master)
+    }
+
+    private val tvSeasonCache = ConcurrentHashMap<Int, Int>()
+
+    /** Jumlah season dari TMDB (di-cache) — buat fallback probe season terakhir. */
+    private suspend fun lastSeason(tmdbId: Int): Int? {
+        tvSeasonCache[tmdbId]?.let { return it }
+        val seasons = try {
+            JSONObject(app.get(tmdbUrl("/tv/$tmdbId")).text).optInt("number_of_seasons", 0)
+        } catch (_: Exception) {
+            0
+        }
+        if (seasons > 0) tvSeasonCache[tmdbId] = seasons
+        return seasons.takeIf { it > 0 }
     }
 
     /** Bangun SearchResponse + probe kualitas untuk badge di card. */
