@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
  *   - TMDB API  → search, discover/popular, movie/tv details
  *   - moviesapi.to (Vidora API) → HLS stream URLs + subtitles
  *
- * v8: Card quality badge — probe Vidora API per title (cached, throttled)
+ * v9: Card quality badge — fetch master.m3u8 per title (cached, throttled)
  */
 class SflixProvider : MainAPI() {
     override var mainUrl = "https://moviesapi.to"
@@ -65,10 +65,27 @@ class SflixProvider : MainAPI() {
                 else -> Qualities.Unknown.value
             }
         }
+
+        /** Parse master.m3u8 → highest resolution label ("4K"/"FHD"/"HD"/"SD"). */
+        private fun parseMasterResolution(playlist: String): String? {
+            var bestHeight = 0
+            Regex("""RESOLUTION=\d+x(\d+)""").findAll(playlist).forEach { match ->
+                val h = match.groupValues[1].toIntOrNull() ?: 0
+                if (h > bestHeight) bestHeight = h
+            }
+            if (bestHeight == 0) return null
+            return when {
+                bestHeight >= 2160 -> "4K"
+                bestHeight >= 1080 -> "FHD"
+                bestHeight >= 720  -> "HD"
+                bestHeight >= 480  -> "SD"
+                else -> "${bestHeight}p"
+            }
+        }
     }
 
     /**
-     * Probe Vidora API untuk kualitas tertinggi suatu judul → String label (mis. "1080p").
+     * Probe kualitas: fetch master.m3u8 → parse RESOLUTION → label ("FHD"/"HD"/etc).
      * Hasil di-cache per (type,id) agar hanya 1x probe per judul per sesi.
      */
     private suspend fun probeQuality(tmdbId: Int, isTv: Boolean): String? {
@@ -78,6 +95,7 @@ class SflixProvider : MainAPI() {
         return withContext(Dispatchers.IO) {
             probeSemaphore.withPermit {
                 try {
+                    // Step 1: Get source URL from Vidora API
                     val url = if (isTv) "$VIDORA_BASE/tv/$tmdbId/1/1" else "$VIDORA_BASE/movie/$tmdbId"
                     val headers = mapOf(
                         "x-player-key" to VIDORA_KEY,
@@ -93,20 +111,17 @@ class SflixProvider : MainAPI() {
                         if (start < 0 || end <= start) return@withPermit null
                         JSONObject(response.substring(start, end + 1))
                     }
-                    val sources = json.optJSONArray("sources") ?: return@withPermit null
+                    val sourceUrl = json.optJSONArray("sources")
+                        ?.optJSONObject(0)
+                        ?.optString("url")
+                        ?.takeIf { it.contains(".m3u8") }
+                        ?: return@withPermit null
 
-                    var bestLabel: String? = null
-                    var bestVal = Qualities.Unknown.value
-                    for (i in 0 until sources.length()) {
-                        val label = sources.getJSONObject(i).optString("quality")
-                        val v = mapQuality(label)
-                        if (v > bestVal) {
-                            bestVal = v
-                            bestLabel = label
-                        }
-                    }
-                    if (bestLabel != null) qualityCache[key] = bestLabel
-                    bestLabel
+                    // Step 2: Fetch master playlist (follows redirects), parse resolution
+                    val masterResponse = app.get(sourceUrl, headers = headers).text
+                    val qualityLabel = parseMasterResolution(masterResponse)
+                    if (qualityLabel != null) qualityCache[key] = qualityLabel
+                    qualityLabel
                 } catch (_: Exception) {
                     null
                 }
