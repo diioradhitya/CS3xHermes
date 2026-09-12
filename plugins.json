@@ -352,10 +352,10 @@
     "iconUrl": "https://www.google.com/s2/favicons?domain=new13.savefilm21info.com&sz=64"
   },
   {
-    "fileHash": "sha256-d0debcfdc658c0fe2ebe8a61aae47024660f57cf8d2c260cc36285163a7f0c1c",
+    "fileHash": "sha256-df34ca949cd2c304e870bd261c76ec1064317a0ef1ed9e742f224e27f1447424",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 26193,
+    "fileSize": 27876,
     "status": 1,
     "language": "id",
     "authors": [
@@ -365,7 +365,7 @@
       "Movie",
       "TvSeries"
     ],
-    "version": 9,
+    "version": 10,
     "internalName": "SflixProvider",
     "description": "SFlix - Movie & TV Series via TMDB metadata + moviesapi.to Vidora HLS (direct .m3u8, subtitles)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/SflixProvider.cs3",
