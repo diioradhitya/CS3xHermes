@@ -29,22 +29,27 @@ class KuronimeProvider : MainAPI() {
     private val apiBase = "https://animeku.org/api/v9/sources"
     private val aesKey = "3&!Z0M,VIZ;dZW=="
 
+    // Homepage cards use class "bsu", search results use "bs" — match both.
+    private val cardSelector = "article.bsu, article.bs"
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page <= 1) mainUrl else "$mainUrl/page/$page/"
         val doc = app.get(url).document
-        val items = doc.select("article.bs").mapNotNull { it.toSearchResult() }
+        val items = doc.select(cardSelector).mapNotNull { it.toSearchResult() }
         return newHomePageResponse(request.name, items)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val doc = app.get("$mainUrl/?s=$query").document
-        return doc.select("article.bs").mapNotNull { it.toSearchResult() }
+        return doc.select(cardSelector).mapNotNull { it.toSearchResult() }
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
         val a = selectFirst("a[itemprop=url]") ?: return null
         val title = selectFirst("h2[itemprop=headline]")?.text()?.trim() ?: return null
-        val href = a.attr("href")
+        var href = a.attr("href")
+        // Homepage cards point straight to an episode page (/nonton-...).
+        // Keep the card tappable: load() will resolve it to the anime page.
         val poster = selectFirst("img[itemprop=image]")?.attr("src")
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = poster
@@ -52,7 +57,16 @@ class KuronimeProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val doc = app.get(url).document
+        var target = url
+        if (target.contains("/nonton-")) {
+            // Episode page -> resolve to anime detail page via its breadcrumb link.
+            val epDoc = app.get(target).document
+            val animeLink = epDoc.selectFirst("a[href*=/anime/]")?.attr("href")
+            if (animeLink != null && animeLink.contains("/anime/")) {
+                target = animeLink
+            }
+        }
+        val doc = app.get(target).document
         val title = doc.selectFirst("h1.entry-title")?.text()?.trim() ?: "Unknown"
         val poster = doc.selectFirst(".main-info .l img")?.attr("src")
         val synopsis = doc.selectFirst(".entry-content .conx")?.text()
@@ -64,7 +78,7 @@ class KuronimeProvider : MainAPI() {
             newEpisode(epUrl) { this.name = epName }
         }.reversed()
 
-        return newTvSeriesLoadResponse(title, url, TvType.Anime, episodes) {
+        return newTvSeriesLoadResponse(title, target, TvType.Anime, episodes) {
             this.posterUrl = poster
             this.plot = synopsis
         }
