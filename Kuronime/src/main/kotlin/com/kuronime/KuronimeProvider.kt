@@ -46,11 +46,13 @@ class KuronimeProvider : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val a = selectFirst("a[itemprop=url]") ?: return null
-        val title = selectFirst("h2[itemprop=headline]")?.text()?.trim() ?: return null
+        val title = (selectFirst("h2[itemprop=headline]")?.text() ?: select(".bsuxtt").text())
+            .trim().ifEmpty { return null }
         var href = a.attr("href")
         // Homepage cards point straight to an episode page (/nonton-...).
         // Keep the card tappable: load() will resolve it to the anime page.
-        val poster = selectFirst("img[itemprop=image]")?.attr("src")
+        val img = selectFirst("img")
+        val poster = img?.attr("src")?.ifBlank { null } ?: img?.attr("data-src")
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = poster
         }
