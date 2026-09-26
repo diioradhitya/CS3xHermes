@@ -85,6 +85,28 @@
         "name": "HarufilmProvider"
     },
     {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=idnmovie.com&sz=64",
+        "fileHash": "sha256-5418657379b2b45760b810486d6e9df49c4eb26e471da2180db584a297311b7e",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 27171,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Dio R"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Anime"
+        ],
+        "version": 1,
+        "internalName": "IdnMovieProvider",
+        "description": "IDNMovie - Nonton Film, TV, Anime Sub Indo (idnmovie.com)",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/IdnMovieProvider.cs3",
+        "name": "IdnMovieProvider"
+    },
+    {
         "fileHash": "sha256-c12ec11dce235fa6807d7f855368e89dc22cac208c1e7955f7a56b8f75a2a614",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
