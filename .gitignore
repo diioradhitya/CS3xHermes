@@ -19,3 +19,7 @@ local.properties
 
 # OS
 Thumbs.db
+
+# Python tooling (replay harness)
+tools/__pycache__/
+*.pyc
