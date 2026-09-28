@@ -3,6 +3,7 @@ package com.idnmovie
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.utils.*
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -88,6 +89,28 @@ class IdnMovieProvider : MainAPI() {
     }
 
     private fun abs(u: String) = if (u.startsWith("http")) u else "$mainUrl$u"
+
+    /**
+     * SFL memberi URL proxy `/api/dracin/seg?u=<mp4 asli>&r=<referer>`.
+     * Proxy itu Livestream-style: kalau request tanpa Range, dia stream seluruh
+     * file (ratusan MB) dan header hanya muncul setelah data mengalir, jadi
+     * ExoPlayer nunggu tanpa batas -> spinner "loading" muter.
+     * URL asli (parameter `u`) + referer (`r`) sudah dukung Range & Content-Length.
+     *
+     * PENTING: query string harus di-parse SEBELUM di-decode. Nilai `u` sendiri
+     * memuat `&` ter-encode (`%26`) untuk param `sign`/`t` upstream; kalau kita
+     * decode dulu lalu split, token `t=` ikut terpotong dan upstream menolak.
+     */
+    private fun directFromSfl(u: String): Pair<String, String?> {
+        val full = abs(u)
+        val parsed = runCatching { full.toHttpUrlOrNull() }.getOrNull()
+            ?: return full to null
+        if (!full.contains("/api/dracin/seg")) return full to null
+        val direct = parsed.queryParameter("u")
+        val referer = parsed.queryParameter("r")
+        if (direct.isNullOrBlank()) return full to referer
+        return direct to referer
+    }
 
     private fun posterOf(raw: String?): String? = when {
         raw.isNullOrBlank() || raw == "null" -> null
@@ -594,9 +617,10 @@ class IdnMovieProvider : MainAPI() {
             if (u.isBlank()) continue
             val q = s.optInt("quality", 0)
             val isHls = s.optBoolean("isM3u8", false)
+            val (finalUrl, finalRef) = directFromSfl(u)
             callback(
-                newExtractorLink(name, s.optString("name").ifBlank { "SFLIX" }, abs(u)) {
-                    this.referer = mainUrl
+                newExtractorLink(name, s.optString("name").ifBlank { "SFLIX" }, finalUrl) {
+                    this.referer = finalRef ?: mainUrl
                     this.quality = qualityOf(q)
                     // Proxy /api/dracin/seg tidak berakhiran ekstensi, jadi ExoPlayer
                     // butuh tipe eksplisit: HLS kalau flag isM3u8, selain itu MP4.
@@ -681,8 +705,8 @@ class IdnMovieProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
-        val season = Regex("""[?&]s=(\d+)""").find(data)?.groupValues?.get(1)?.toIntOrNull() ?: 1
-        val ep = Regex("""[?&]ep=(\d+)""").find(data)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+        val season = Regex("""(?:^|[|?&])s=(\d+)""").find(data)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+        val ep = Regex("""(?:^|[|?&])ep=(\d+)""").find(data)?.groupValues?.get(1)?.toIntOrNull() ?: 1
         return loadEmbedLinks(page, "tvseries", slug, season, ep, subtitleCallback, callback)
     }
 
