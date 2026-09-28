@@ -86,10 +86,10 @@
   },
   {
     "iconUrl": "https://www.google.com/s2/favicons?domain=idnmovie.com&sz=64",
-    "fileHash": "sha256-a1dba0539cc77ef233c0e841c993e7a7551adb201e4e4f6399ec0331c1be03d5",
+    "fileHash": "sha256-b769a1d1e734737daa1005ea0f1c488bbddf686fa56387fa6bcb4150d4e138cb",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 26312,
+    "fileSize": 26356,
     "status": 1,
     "language": "id",
     "authors": [
@@ -100,7 +100,7 @@
       "TvSeries",
       "Anime"
     ],
-    "version": 5,
+    "version": 6,
     "internalName": "IdnMovieProvider",
     "description": "IDNMovie - Nonton Film, TV, Anime Sub Indo (idnmovie.com)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/IdnMovieProvider.cs3",
@@ -399,4 +399,3 @@
     "name": "WGFilm21"
   }
 ]
-
