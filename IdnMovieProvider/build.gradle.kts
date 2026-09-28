@@ -1,4 +1,4 @@
-version = 2
+version = 4
 
 cloudstream {
     description = "IDNMovie - Nonton Film, TV, Anime Sub Indo (idnmovie.com)"

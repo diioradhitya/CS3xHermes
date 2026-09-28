@@ -271,6 +271,156 @@ def probe(title, kind, slug, season=None, ep=None):
     return True
 
 
+def json_loads_at(text, prefix):
+    """Parse the JSON object that *starts with* `prefix`, balancing braces.
+
+    Balancing from just after the key fails here: `"title":` is followed by a
+    quote, not a brace, so every card gets skipped. Start at the prefix's own `{`.
+    """
+    if not text:
+        return None
+    start = text.find(prefix)
+    if start < 0:
+        return None
+    depth, in_str, esc = 0, False, False
+    i = start
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        else:
+            if c == '"':
+                in_str = True
+            elif c in "[{":
+                depth += 1
+            elif c in "]}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except Exception:
+                        return None
+        i += 1
+    return None
+
+
+def json_array_after(text, key):
+    """Parse the array that follows `key`, or None."""
+    i = text.find(key) if text else -1
+    if i < 0:
+        return None
+    i += len(key)
+    if i >= len(text) or text[i] not in "[{":
+        return None
+    start, depth, in_str, esc = i, 0, False, False
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        else:
+            if c == '"':
+                in_str = True
+            elif c in "[{":
+                depth += 1
+            elif c in "]}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except Exception:
+                        return None
+        i += 1
+    return None
+
+
+def probe_homepage():
+    """Homepage + episode-list gate.
+
+    Two shipped bugs slipped past the playback-only harness: the catalog parser
+    returned zero cards (homepage blank) and the episode list was hardcoded to a
+    single episode. Playback PASSed while the homepage was empty, so both need
+    their own gate.
+    """
+    print("\n== homepage ==")
+    ok = True
+    for path, kind, label in (("/movies", "movie", "Movie"), ("/tv", "tv", "TV Series")):
+        raw = flight(fetch(f"{SITE}{path}"))
+        cards, seen = [], set()
+        for m in re.finditer(r'\{"id":"([a-z0-9\-]{6,})","title":"', raw):
+            slug = m.group(1)
+            if slug in seen:
+                continue
+            seen.add(slug)
+            obj = json_loads_at(raw, '{"id":"%s","title":' % slug)
+            if not obj or "title" not in obj:
+                continue
+            cards.append(obj)
+        n = len(cards)
+        print(f"  {'OK  ' if n else 'FAIL'} {label:10} {n:4} cards parsed from {path}")
+        if not n:
+            ok = False
+        else:
+            # every listed slug must resolve on the route its card advertises,
+            # else load() mis-dispatches (TV cards pointed at /movie/<slug>)
+            bad = []
+            for c in cards[:6]:
+                slug = c.get("id", "")
+                route = ("/sfl/" + slug[4:]) if slug.startswith("sfl-") else \
+                        (f"/tv/{slug}" if kind == "tv" else f"/movie/{slug}")
+                r = fetch(f"{SITE}{route}", ref=f"{SITE}/")
+                if len(r) < 2000:
+                    bad.append(f"{slug}->{route}")
+            if bad:
+                print(f"  FAIL  detail route dead/empty for {bad}")
+                ok = False
+            else:
+                print(f"  OK   first 6 detail routes resolve for {label}")
+    return ok
+
+
+def probe_episodes(slug, title):
+    """Episode list must come from seasons[].episode_count, not a hardcoded ep1."""
+    print(f"\n== episodes: {title} ==")
+    raw = flight(fetch(f"{SITE}/tv/{slug}"))
+    arr = json_array_after(raw, '"seasons":')
+    counts = []
+    if arr:
+        for s in arr:
+            sn, ec = s.get("season_number", -1), s.get("episode_count", -1)
+            if sn > 0 and 1 <= ec <= 200:
+                counts.append((sn, ec))
+    total = sum(ec for _, ec in counts)
+    print(f"  {'OK  ' if total > 1 else 'FAIL'} seasons={counts} total_episodes={total}")
+    if total <= 1:
+        return False
+    # player id is per-deployment and must come from the page, never hardcoded
+    pm = re.search(r'"idxEmbedQuery"\s*:\s*"[^"]*player=([0-9a-f\-]{36})', raw)
+    player = pm.group(1) if pm else ""
+    if not player:
+        print("  FAIL  no idxEmbedQuery player on detail page")
+        return False
+    print(f"  player {player}")
+    # an episode beyond ep1 must actually resolve on the embed route
+    sn, ec = max(counts, key=lambda x: x[1])
+    for ep in (1, ec):
+        url = f"{EMBED}/idx/tvseries/{slug}/{sn}/{ep}?ui=lorong&player={player}"
+        r = fetch(url, ref=f"{SITE}/")
+        pid, pd = parse_play(flight(r))
+        good = bool(pid and isinstance(pd, dict) and pd.get("id"))
+        print(f"  {'OK  ' if good else 'WARN'} S{sn}E{ep} playerId={pid} playData={str(pd)[:70]}")
+    return True
+
+
 def main():
     tv = listing("tv")
     mv = listing("movie")
@@ -279,6 +429,13 @@ def main():
     print(f"listing: tv {len(tv)} | movie sfl {len(sfl)} + slug {len(slugmv)}")
 
     ok = True
+    # 0) homepage + episode list (the two bugs that shipped while playback passed)
+    ok &= probe_homepage()
+    if tv:
+        ok &= probe_episodes(tv[0]["slug"], tv[0]["title"])
+    else:
+        print("\n!! no tv cards found")
+        ok = False
     # 1) sfl family (dracin/seg MP4 proxy)
     if sfl:
         ok &= probe_sfl(sfl[0]["title"], sfl[0]["slug"])

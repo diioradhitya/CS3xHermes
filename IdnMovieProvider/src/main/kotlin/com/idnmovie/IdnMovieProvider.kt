@@ -178,6 +178,44 @@ class IdnMovieProvider : MainAPI() {
         return null
     }
 
+    /**
+     * Objek JSON yang DIPERNAHIKAN prefix-nya, dihitung dari `{` pembuka prefix.
+     *
+     * [balancedAfter] tidak bisa dipakai di sini: ia mulai menghitung di karakter
+     * SESUDAH key, sedangkan `"title":` diikuti tanda kutip, bukan `{` — hasilnya
+     * selalu null dan seluruh kartu listing ter-skip (homepage kosong).
+     */
+    private fun objectStartingWith(data: String?, prefix: String): String? {
+        if (data == null) return null
+        val start = data.indexOf(prefix)
+        if (start < 0) return null
+        var i = start
+        var depth = 0
+        var inStr = false
+        var esc = false
+        while (i < data.length) {
+            val c = data[i]
+            if (inStr) {
+                when {
+                    esc -> esc = false
+                    c == '\\' -> esc = true
+                    c == '"' -> inStr = false
+                }
+            } else {
+                when (c) {
+                    '"' -> inStr = true
+                    '[', '{' -> depth++
+                    ']', '}' -> {
+                        depth--
+                        if (depth == 0) return data.substring(start, i + 1)
+                    }
+                }
+            }
+            i++
+        }
+        return null
+    }
+
     private fun jsonArrayAfter(data: String?, key: String): JSONArray? = try {
         balancedAfter(data, key)?.let { JSONArray(it) }
     } catch (e: Exception) {
@@ -212,16 +250,20 @@ class IdnMovieProvider : MainAPI() {
         for (m in re.findAll(data)) {
             val slug = m.groupValues[1]
             if (!seen.add(slug)) continue
-            val raw = balancedAfter(data, """{"id":"$slug","title":""") ?: continue
+            val raw = objectStartingWith(data, """{"id":"$slug","title":""") ?: continue
             val obj = try { JSONObject(raw) } catch (e: Exception) { continue }
             val title = obj.optString("title").ifBlank { slug }
+            // kartu sfl tidak punya poster_path; mereka bring posterUrlRaw CDN sendiri
+            val posterRaw = obj.optString("poster_path").takeIf { it.isNotBlank() && it != "null" }
+                ?: obj.optString("posterUrlRaw")
+            val date = obj.optString("release_date").takeIf { it != "null" }
+                ?: obj.optString("first_air_date")
             out.add(
                 Card(
                     slug = slug,
                     title = title,
-                    poster = posterOf(obj.optString("poster_path").ifBlank { obj.optString("poster") }),
-                    year = obj.optString("release_date").take(4).toIntOrNull()
-                        ?: obj.optString("first_air_date").take(4).toIntOrNull()
+                    poster = posterOf(posterRaw),
+                    year = date.take(4).toIntOrNull()
                         ?: obj.optString("year").toIntOrNull(),
                     type = type,
                 )
@@ -236,13 +278,18 @@ class IdnMovieProvider : MainAPI() {
         return all.sortedBy { if (it.slug.startsWith("sfl-")) 0 else 1 }
     }
 
-    private fun pageUrl(slug: String): String = when {
+    /**
+     * URL detail. TV harus ke /tv/{slug} — kalau落到 /movie/{slug}, [load] akan
+     * mendeteksi "/tv/" tidak ada dan mengembalikan MovieLoadResponse tanpa episode.
+     */
+    private fun pageUrl(slug: String, type: TvType): String = when {
         slug.startsWith("sfl-") -> "$mainUrl/sfl/${slug.removePrefix("sfl-")}"
+        type == TvType.TvSeries -> "$mainUrl/tv/$slug"
         else -> "$mainUrl/movie/$slug"
     }
 
     private fun cardResponse(c: Card): SearchResponse =
-        newMovieSearchResponse(c.title, pageUrl(c.slug), TvType.Movie) {
+        newMovieSearchResponse(c.title, pageUrl(c.slug, c.type), TvType.Movie) {
             this.posterUrl = c.poster
             this.year = c.year
         }
@@ -257,7 +304,7 @@ class IdnMovieProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = if (request.name == "TV Series")
             listingCards("/tv", TvType.TvSeries).map {
-                newTvSeriesSearchResponse(it.title, pageUrl(it.slug), TvType.TvSeries) {
+                newTvSeriesSearchResponse(it.title, pageUrl(it.slug, TvType.TvSeries), TvType.TvSeries) {
                     this.posterUrl = it.poster
                     this.year = it.year
                 }
@@ -357,14 +404,39 @@ class IdnMovieProvider : MainAPI() {
             }
         }
         if (episodes.isEmpty()) {
-            episodes.add(
-                newEpisode("$url|s=$season|ep=1") {
-                    this.name = "Episode 1"
-                    this.episode = 1
-                    this.season = season
-                    this.posterUrl = poster
+            // Halaman detail tidak pernah mengirim daftar episode — hanya metadata
+            // `seasons[]`. Jumlah episode diambil dari `episode_count` per season dan
+            // URL playback dibangun lazy oleh loadLinks dari |s=|ep=. Dibatasi 200 per
+            // season agar count rusak tidak meledakkan daftar episode.
+            val seasonsJson = jsonArrayAfter(data, "\"seasons\":")
+            val counts = mutableListOf<Pair<Int, Int>>()   // seasonNumber -> episodeCount
+            if (seasonsJson != null) {
+                for (i in 0 until seasonsJson.length()) {
+                    val s = seasonsJson.optJSONObject(i) ?: continue
+                    val sn = s.optInt("season_number", -1)
+                    val ec = s.optInt("episode_count", -1)
+                    if (sn > 0 && ec in 1..200) counts.add(sn to ec)
                 }
-            )
+            }
+            if (counts.isEmpty()) {
+                // fallback: baca episode_count pertama yang masuk rentang 1..200
+                val ec = Regex(""""episode_count"\s*:\s*(\d+)""").findAll(data)
+                    .mapNotNull { it.groupValues[1].toIntOrNull() }
+                    .firstOrNull { it in 1..200 } ?: 1
+                counts.add(season to ec)
+            }
+            for ((sn, ec) in counts.sortedBy { it.first }) {
+                for (n in 1..ec) {
+                    episodes.add(
+                        newEpisode("$url|s=$sn|ep=$n") {
+                            this.name = "Episode $n"
+                            this.episode = n
+                            this.season = sn
+                            this.posterUrl = poster
+                        }
+                    )
+                }
+            }
         }
         return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
