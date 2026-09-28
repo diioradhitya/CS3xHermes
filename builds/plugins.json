@@ -86,10 +86,10 @@
   },
   {
     "iconUrl": "https://www.google.com/s2/favicons?domain=idnmovie.com&sz=64",
-    "fileHash": "sha256-6b391df2063d5302ff3a97ffd5734ebe561b337000f9a501e0310931b7b69de7",
+    "fileHash": "a1dba0539cc77ef233c0e841c993e7a7551adb201e4e4f6399ec0331c1be03d5",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 23687,
+    "fileSize": 26312,
     "status": 1,
     "language": "id",
     "authors": [
@@ -100,7 +100,7 @@
       "TvSeries",
       "Anime"
     ],
-    "version": 4,
+    "version": 5,
     "internalName": "IdnMovieProvider",
     "description": "IDNMovie - Nonton Film, TV, Anime Sub Indo (idnmovie.com)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/IdnMovieProvider.cs3",

@@ -296,21 +296,118 @@ class IdnMovieProvider : MainAPI() {
 
     // --------------------------------------------------------------- mainpage
 
+    /**
+     * Section homepage. Nama diambil dari heading yang benar-benar ada di root page
+     * (`/`) — bukan diterka dari URL, karena hampir semua route kandidat 404 dengan
+     * halaman shell ~9.5KB tanpa kartu. Semua section di bawah sudah diverifikasi
+     * punya kartu: Film Terbaru 72, Populer 36, Update 72, Papan Peringkat 36,
+     * Film Indonesia 15, Serial TV 5.
+     *
+     * Section dibaca dari posisi heading di payload RSC, jadi kartu milik tiap
+     * section diambil dari potongan payload sendiri — bukan dari /movies atau /tv.
+     */
+    private val homeHeadings = listOf(
+        "Sorotan",
+        "Film Terbaru",
+        "Populer",
+        "Film Indonesia",
+        "Serial TV",
+        "Update",
+        "Papan Peringkat",
+    )
+
     override val mainPage = mainPageOf(
         "movie" to "Movie",
         "tv" to "TV Series",
+        "sorotan" to "Sorotan",
+        "terbaru" to "Film Terbaru",
+        "populer" to "Populer",
+        "indonesia" to "Film Indonesia",
+        "serialtv" to "Serial TV",
+        "update" to "Update",
+        "peringkat" to "Papan Peringkat",
     )
 
+    /** Kartu di antara dua batas karakter pada payload RSC root. */
+    private fun cardsInSpan(data: String, from: Int, to: Int): List<Card> {
+        val chunk = data.substring(from, to)
+        val out = ArrayList<Card>()
+        val seen = HashSet<String>()
+        val re = Regex("""\{"id":"([a-z0-9\-]{6,})","title":"""")
+        for (m in re.findAll(chunk)) {
+            val slug = m.groupValues[1]
+            if (!seen.add(slug)) continue
+            val obj = try {
+                JSONObject(objectStartingWith(chunk, """{"id":"$slug","title":""") ?: continue)
+            } catch (e: Exception) {
+                continue
+            }
+            out.add(
+                Card(
+                    slug = slug,
+                    title = obj.optString("title").ifBlank { slug },
+                    poster = posterOf(
+                        obj.optString("poster_path").takeIf { it.isNotBlank() && it != "null" }
+                            ?: obj.optString("posterUrlRaw")
+                    ),
+                    year = obj.optString("release_date").takeIf { it != "null" }?.take(4)?.toIntOrNull()
+                        ?: obj.optString("first_air_date").takeIf { it != "null" }?.take(4)?.toIntOrNull(),
+                    // TvSeries hanya kalau slug-nya muncul sebagai /tv/{slug} di root
+                    type = if (data.contains("\"/tv/$slug\"")) TvType.TvSeries else TvType.Movie,
+                )
+            )
+        }
+        // shape B: slide sorotan/serial — {"href":"/tv/<slug>","src":"...","title":"..."}
+        // Beda shape dari katalog, jadi parser terpisah; slug diambil dari href.
+        val reB = Regex("""\{"href":"((?:/tv/|/movie/|/sfl/)?([a-z0-9\-]{6,}))","src":""")
+        for (m in reB.findAll(chunk)) {
+            val href = m.groupValues[1]
+            val slug = m.groupValues[2]
+            if (!seen.add(slug)) continue
+            val obj = try {
+                JSONObject(objectStartingWith(chunk, "{\"href\":\"$href\",\"src\":"))
+            } catch (e: Exception) {
+                continue
+            }
+            out.add(
+                Card(
+                    slug = slug,
+                    title = obj.optString("title").ifBlank { slug },
+                    poster = posterOf(obj.optString("src")),
+                    year = obj.optString("year").toIntOrNull(),
+                    type = if (href.startsWith("/tv/")) TvType.TvSeries else TvType.Movie,
+                )
+            )
+        }
+        return out
+    }
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val items = if (request.name == "TV Series")
-            listingCards("/tv", TvType.TvSeries).map {
+        val items: List<SearchResponse> = when (request.name) {
+            "TV Series" -> listingCards("/tv", TvType.TvSeries).map {
                 newTvSeriesSearchResponse(it.title, pageUrl(it.slug, TvType.TvSeries), TvType.TvSeries) {
                     this.posterUrl = it.poster
                     this.year = it.year
                 }
             }
-        else
-            movieCards().map { cardResponse(it) }
+            "Movie" -> movieCards().map { cardResponse(it) }
+            else -> {
+                val data = rsc(getText("$mainUrl/")) ?: return newHomePageResponse(request.name, emptyList())
+                // urutkan semua heading, lalu tiap section mengambil rentang sampai
+                // heading berikutnya — ini yang membatasi "Film Terbaru" agar tidak
+                // menelan 72 kartu milik "Update".
+                val marks = homeHeadings.mapNotNull { heading ->
+                    data.indexOf(heading).takeIf { it >= 0 }?.let { heading to it }
+                }.sortedBy { it.second }
+                val idx = marks.indexOfFirst { it.first == request.name }
+                if (idx < 0) emptyList()
+                else {
+                    val from = marks[idx].second
+                    val to = marks.getOrNull(idx + 1)?.second ?: data.length
+                    cardsInSpan(data, from, to).map { cardResponse(it) }
+                }
+            }
+        }
         return newHomePageResponse(request.name, items)
     }
 
@@ -489,10 +586,14 @@ class IdnMovieProvider : MainAPI() {
             val u = s.optString("url")
             if (u.isBlank()) continue
             val q = s.optInt("quality", 0)
+            val isHls = s.optBoolean("isM3u8", false)
             callback(
                 newExtractorLink(name, s.optString("name").ifBlank { "SFLIX" }, abs(u)) {
                     this.referer = mainUrl
                     this.quality = qualityOf(q)
+                    // Proxy /api/dracin/seg tidak berakhiran ekstensi, jadi ExoPlayer
+                    // butuh tipe eksplisit: HLS kalau flag isM3u8, selain itu MP4.
+                    this.type = if (isHls) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
                 }
             )
         }
@@ -556,6 +657,11 @@ class IdnMovieProvider : MainAPI() {
                 newExtractorLink(name, "IDLIX", u) {
                     this.referer = ref
                     this.quality = qualityOf(q)
+                    // WAJIB: URL master berakhiran config-*.json, bukan .m3u8.
+                    // Tanpa type=M3U8 ExoPlayer memperlakukannya sebagai file video
+                    // biasa dan playback gagal ("no links found" di app, padahal
+                    // HTTP + isi playlist selalu 200 #EXTM3U).
+                    this.type = ExtractorLinkType.M3U8
                 }
             )
             emitted++
