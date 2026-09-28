@@ -86,7 +86,7 @@
   },
   {
     "iconUrl": "https://www.google.com/s2/favicons?domain=idnmovie.com&sz=64",
-    "fileHash": "a1dba0539cc77ef233c0e841c993e7a7551adb201e4e4f6399ec0331c1be03d5",
+    "fileHash": "sha256-a1dba0539cc77ef233c0e841c993e7a7551adb201e4e4f6399ec0331c1be03d5",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
     "fileSize": 26312,
