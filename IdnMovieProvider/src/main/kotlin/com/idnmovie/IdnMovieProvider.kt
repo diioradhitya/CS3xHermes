@@ -555,9 +555,16 @@ class IdnMovieProvider : MainAPI() {
         val isTv = page.contains("/tv/") || data.contains("|s=")
         val slug = page.substringAfterLast("/")
 
-        return if (isTv) loadTvLinks(page, slug, data, subtitleCallback, callback)
-        else if (slug.startsWith("sfl-")) loadSflLinks(page, subtitleCallback, callback)
-        else loadEmbedLinks(page, "movie", slug, null, null, subtitleCallback, callback)
+        // PENTING: pageUrl() menaruh sfl sebagai "/sfl/{dracinId}" (prefix "sfl-"
+        // sudah dibuang). Jadi deteksi lewat slug.startsWith("sfl-") selalu
+        // false dan tiap item sfl jatuh ke loadEmbedLinks yang tidak punya embed
+        // -> "No Links Found". Deteksi harus dari segmen path "/sfl/".
+        return when {
+            isTv -> loadTvLinks(page, slug, data, subtitleCallback, callback)
+            page.contains("/sfl/") || slug.startsWith("sfl-") ->
+                loadSflLinks(page, subtitleCallback, callback)
+            else -> loadEmbedLinks(page, "movie", slug, null, null, subtitleCallback, callback)
+        }
     }
 
     /** Keluarga sfl: MP4 via proxy /api/dracin/seg milik situs. */
