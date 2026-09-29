@@ -118,6 +118,39 @@ class IdnMovieProvider : MainAPI() {
         else -> "https://image.tmdb.org/t/p/w500$raw"
     }
 
+    /**
+     * TMDB menyajikan satu file yang sama di beberapa ukuran lewat segment path
+     * (`/t/p/w300/` -> `/t/p/w500/`), jadi still w300 bisa dinaikkan ke resolusi
+     * banner tanpa request kedua. File asli tidak berubah, hanya bucket-nya.
+     */
+    private fun tmdbSize(url: String?, size: String): String? =
+        url?.takeIf { it.startsWith("http") }?.replace(Regex("/t/p/[a-z0-9]+/"), "/t/p/$size/")
+
+    /**
+     * Still per-episode dari `/api/tv/{tvId}/season/{season}`.
+     *
+     * PENTING: payload RSC halaman detail TV TIDAK PERNAH mengirim `still` — yang
+     * ada hanya `poster_path` milik seri. Jadi tanpa endpoint ini setiap episode
+     * mewarisi poster potret seri dan banner di daftar episode terlihat sama
+     * untuk semua episode. Endpoint ini satu-satunya sumber gambar per-episode.
+     */
+    private fun seasonStills(tvId: Long?, season: Int, referer: String?): Map<Int, String?> {
+        if (tvId == null || season <= 0) return emptyMap()
+        val body = getText("$mainUrl/api/tv/$tvId/season/$season", referer) ?: return emptyMap()
+        val arr = try {
+            JSONObject(body).optJSONArray("episodes")
+        } catch (e: Exception) {
+            null
+        } ?: return emptyMap()
+        val out = HashMap<Int, String?>()
+        for (i in 0 until arr.length()) {
+            val e = arr.optJSONObject(i) ?: continue
+            val n = e.optInt("number", e.optInt("episode", i + 1))
+            if (n > 0) out[n] = tmdbSize(posterOf(e.optString("still")), "w500")
+        }
+        return out
+    }
+
     // ------------------------------------------------------------- RSC helpers
 
     /** Gabungkan seluruh chunk `self.__next_f.push([1,"..."])` jadi satu payload. */
@@ -505,8 +538,11 @@ class IdnMovieProvider : MainAPI() {
         poster: String?, plot: String?, year: Int?, score: String?,
     ): LoadResponse {
         val slug = url.substringAfterLast("/").substringBefore("|")
-        val season = Regex("""[?&]s=(\d+)""").find(url)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+        val season = Regex("""(?:^|[|?&])s=(\d+)""").find(url)?.groupValues?.get(1)?.toIntOrNull() ?: 1
         val episodes = mutableListOf<Episode>()
+
+        // tvId dari RSC untuk fetch still per-episode (lihat seasonStills)
+        val tvId = Regex(""""tvId"\s*:\s*(\d+)""").find(data)?.groupValues?.get(1)?.toLongOrNull()
 
         val epsJson = jsonArrayAfter(data, "\"episodes\":")
         if (epsJson != null) {
@@ -518,7 +554,7 @@ class IdnMovieProvider : MainAPI() {
                         this.name = e.optString("name").ifBlank { "Episode $num" }
                         this.episode = num
                         this.season = season
-                        this.posterUrl = posterOf(e.optString("still")) ?: poster
+                        this.posterUrl = tmdbSize(posterOf(e.optString("still")), "w500") ?: poster
                     }
                 )
             }
@@ -546,13 +582,15 @@ class IdnMovieProvider : MainAPI() {
                 counts.add(season to ec)
             }
             for ((sn, ec) in counts.sortedBy { it.first }) {
+                val stills = seasonStills(tvId, sn, url)
                 for (n in 1..ec) {
                     episodes.add(
                         newEpisode("$url|s=$sn|ep=$n") {
                             this.name = "Episode $n"
                             this.episode = n
                             this.season = sn
-                            this.posterUrl = poster
+                            // still per-episode; poster seri hanya fallback
+                            this.posterUrl = stills[n] ?: poster
                         }
                     )
                 }
