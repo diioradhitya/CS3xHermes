@@ -108,28 +108,45 @@ def main():
     sh("git add builds/IdnMovieProvider.cs3 builds/plugins.json")
     r = sh(f'git commit -m "Builds: IdnMovieProvider v{version} artifact {size}B '
            f'(episode stills per-episode w500)"')
-    print("\ncommit:", (r.stdout + r.stderr).strip().splitlines()[-1] if r.returncode == 0 else r.stderr.strip())
-    if r.returncode != 0 and "nothing to commit" not in (r.stdout + r.stderr):
-        raise SystemExit("FAIL: commit gagal")
+    out = (r.stdout + r.stderr).strip()
+    if r.returncode == 0:
+        print("\ncommit:", out.splitlines()[-1])
+    elif "nothing to commit" in out or "no changes added to commit" in out:
+        # Artefak sudah identik dengan yang di main (mis. re-run deploy).
+        # Ini KEBERHASILAN, bukan kegagalan: yang penting byte di remote cocok.
+        print("\ncommit: sudah identik dengan main (tidak ada perubahan)")
+    else:
+        raise SystemExit(f"FAIL: commit gagal\n{out}")
     r = sh("git push origin main")
     if "main -> main" not in r.stderr and "Everything up-to-date" not in r.stderr:
         raise SystemExit(f"FAIL: push main gagal\n{r.stderr}")
     print("push main:", [l for l in r.stderr.splitlines() if "main" in l][-1:])
 
     # 4. branch builds (root-level artifact) — tetap disinkronkan
+    # Artefak harus distage ke /tmp SEBELUM checkout: path build output hanya ada
+    # di branch main, dan setelah `git checkout` ke branch builds path itu hilang
+    # (checkout menimpa working tree, termasuk tools/ yang tidak ada di sana).
+    staged = f"/tmp/idn_v{version}.cs3"
+    open(staged, "wb").write(blob)
     sh("git fetch origin builds")
     sh("git checkout -B builds-sync origin/builds")
-    r = sh(f"cp /opt/data/work/IdnMovieProvider/build/IdnMovieProvider.cs3 /tmp/idn_v{version}.cs3 "
-           f"&& python3 /opt/data/work/tools/sync_builds_branch.py /tmp/idn_v{version}.cs3 {version}")
+    # helper ikut hilang setelah checkout -> stage ke /tmp juga
+    helper = f"/tmp/sync_builds_{version}.py"
+    open(helper, "w").write(open("/opt/data/work/tools/sync_builds_branch.py").read())
+    r = sh(f"python3 {helper} {staged} {version}")
     print("  branch builds:", (r.stdout + r.stderr).strip())
     if r.returncode != 0:
+        sh("git checkout main")
         raise SystemExit(f"FAIL: sync branch builds gagal\n{r.stderr}")
     sh(f'git add {INTERNAL_NAME}.cs3 plugins.json')
     r = sh(f'git commit -m "Builds: IdnMovieProvider v{version} artifact {size}B (builds branch mirror)"')
-    if r.returncode != 0 and "nothing to commit" not in (r.stdout + r.stderr):
-        raise SystemExit("FAIL: commit branch builds gagal")
+    out = (r.stdout + r.stderr).strip()
+    if r.returncode != 0 and "nothing to commit" not in out and "no changes added to commit" not in out:
+        sh("git checkout main")
+        raise SystemExit(f"FAIL: commit branch builds gagal\n{out}")
     r = sh("git push origin HEAD:builds")
     if r.returncode != 0:
+        sh("git checkout main")
         raise SystemExit(f"FAIL: push builds gagal\n{r.stderr}")
     print("  push builds: ok")
     sh("git checkout main")
