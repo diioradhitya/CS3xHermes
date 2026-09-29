@@ -86,10 +86,10 @@
   },
   {
     "iconUrl": "https://www.google.com/s2/favicons?domain=idnmovie.com&sz=64",
-    "fileHash": "sha256-8e1e893eea5e4811738b68840648ab5e1b370924c9600eba71bf0683948602f4",
+    "fileHash": "sha256-7db7209e6bbbf013921a55b9606056483da6cfbe643a83fd8b629ff66b74654e",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 26990,
+    "fileSize": 27780,
     "status": 1,
     "language": "id",
     "authors": [
@@ -100,7 +100,7 @@
       "TvSeries",
       "Anime"
     ],
-    "version": 7,
+    "version": 8,
     "internalName": "IdnMovieProvider",
     "description": "IDNMovie - Nonton Film, TV, Anime Sub Indo (idnmovie.com)",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/IdnMovieProvider.cs3",
@@ -289,7 +289,7 @@
     ],
     "version": 1,
     "internalName": "Pencurimovie",
-    "description": "Pencurimovie \u2014 Streaming Film & Serial",
+    "description": "Pencurimovie — Streaming Film & Serial",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Pencurimovie.cs3",
     "name": "Pencurimovie"
   },
