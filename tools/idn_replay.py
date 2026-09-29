@@ -421,6 +421,65 @@ def probe_episodes(slug, title):
     return True
 
 
+GENRES = [
+    ("Anime", "/anime", "/api/anime/catalog?category=0&page={}"),
+    ("Drama Korea", "/drama-korea", "/api/drakor/catalog?category=0&page={}"),
+    ("Drama Thailand", "/drama-thailand", "/api/sflix/catalog?category=14&page={}"),
+    ("Drama Indonesia", "/drama-indonesia", "/api/sflix/catalog?category=2&page={}"),
+    ("Vivamax", "/vivamax", "/api/vivamax/new?page={}"),
+]
+
+
+def probe_genre(label, path, tpl):
+    """Genre section: cek kartu, hasMore, dan bahwa halaman 2 benar-benar beda."""
+    print(f"\n-- genre {label} ({path}) --")
+    def page(n):
+        url = SITE + tpl.replace("{}", str(n))
+        return json.loads(fetch(url, SITE + path) or "{}")
+    p1 = page(1)
+    items1 = p1.get("items") or []
+    has1 = bool(p1.get("hasMore"))
+    print(f"   p1: items={len(items1)} hasMore={has1} keys={sorted(p1.keys())[:8]}")
+    if not items1:
+        print(f"   !! {label}: page 1 kosong")
+        return False
+    slug1 = [i.get("slug") or i.get("gudangfilm_slug") for i in items1]
+    missing = [i for i in items1 if not (i.get("title") and (i.get("slug") or i.get("gudangfilm_slug")))]
+    if missing:
+        print(f"   !! {label}: {len(missing)} kartu tanpa title/slug")
+    if not has1:
+        print(f"   note: {label} says hasMore=false (scroll berhenti di p1)")
+        return True
+    p2 = page(2)
+    items2 = p2.get("items") or []
+    has2 = bool(p2.get("hasMore"))
+    slug2 = [i.get("slug") or i.get("gudangfilm_slug") for i in items2]
+    overlap = set(slug1) & set(slug2)
+    print(f"   p2: items={len(items2)} hasMore={has2} overlap_with_p1={len(overlap)}")
+    if not items2:
+        # Guard yang sama dengan [catalogPage] di provider: scroll berhenti kalau
+        # hasMore=true TAPI halamannya kosong. Dua genre (sflix cat 2 dan 14)
+        # memang begitu -- jadi ini perilaku yang diharapkan, bukan bug.
+        print(f"   note: {label} habis di p1 (hasMany=true tapi p2 kosong) -> scroll berhenti, OK")
+        return True
+    if len(overlap) == len(slug2):
+        print(f"   !! {label}: p2 identik p1 -> infinite scroll loop")
+        return False
+    return True
+
+
+def probe_genres():
+    print("\n=== genre sections + pagination ===")
+    ok = True
+    for label, path, tpl in GENRES:
+        try:
+            ok &= probe_genre(label, path, tpl)
+        except Exception as e:
+            print(f"   !! {label}: {type(e).__name__}: {e}")
+            ok = False
+    return ok
+
+
 def main():
     tv = listing("tv")
     mv = listing("movie")
@@ -436,6 +495,8 @@ def main():
     else:
         print("\n!! no tv cards found")
         ok = False
+    # 0b) genre sections + infinite scroll
+    ok &= probe_genres()
     # 1) sfl family (dracin/seg MP4 proxy)
     if sfl:
         ok &= probe_sfl(sfl[0]["title"], sfl[0]["slug"])

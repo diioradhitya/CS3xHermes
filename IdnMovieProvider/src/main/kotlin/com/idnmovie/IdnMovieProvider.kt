@@ -56,6 +56,14 @@ class IdnMovieProvider : MainAPI() {
         /** android's org.json ships in the dex, so no extra dependency is needed */
     }
 
+    /**
+     * Pola nama episode generik yang dipakai generator situs. "Episode 7",
+     * "Episode 7 - Judul", "E07" bukan judul asli dan harus dibuang, kalau tidak
+     * setiap episode akan titled sama dan tidak ada gunanya.
+     */
+    private val PLACEHOLDER_EP =
+        Regex("""^(episode|ep|episodio)\s*[-.:]?\s*\d+\s*(-.*)?$""", RegexOption.IGNORE_CASE)
+
     private val http by lazy {
         OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -127,14 +135,26 @@ class IdnMovieProvider : MainAPI() {
         url?.takeIf { it.startsWith("http") }?.replace(Regex("/t/p/[a-z0-9]+/"), "/t/p/$size/")
 
     /**
-     * Still per-episode dari `/api/tv/{tvId}/season/{season}`.
+     * Metadata per-episode dari `/api/tv/{tvId}/season/{season}`.
      *
-     * PENTING: payload RSC halaman detail TV TIDAK PERNAH mengirim `still` — yang
-     * ada hanya `poster_path` milik seri. Jadi tanpa endpoint ini setiap episode
-     * mewarisi poster potret seri dan banner di daftar episode terlihat sama
-     * untuk semua episode. Endpoint ini satu-satunya sumber gambar per-episode.
+     * PENTING soal title/deskripsi: `name` dan `overview` di endpoint ini praktis
+     * KOSONG untuk serial live-action maupun anime alike -- yang terisi hanya
+     * "Episode N". Diverifikasi di 6 seri (the-scandal-2026,
+     * doctor-on-the-edge-2026, pursuit-of-jade-2026, bloodhounds-2023, dll):
+     * 0 yang punya judul/ringkasan asli. Jadi title/deskripsi harus DI-BANGUN
+     * dari data yang benar-benar ada (air_date + runtime), bukan mengarang
+     * judul sinetron. `name` asli tetap dipakai kalau ternyata terisi
+     * (sebagian seri upcoming punya Episode Name).
      */
-    private fun seasonStills(tvId: Long?, season: Int, referer: String?): Map<Int, String?> {
+    private data class EpisodeMeta(
+        val name: String?,
+        val overview: String?,
+        val still: String?,
+        /** Ringkasan faktual (tanggal tayang + durasi) -- sumber deskripsi satu-satunya. */
+        val facts: String?,
+    )
+
+    private fun seasonMeta(tvId: Long?, season: Int, referer: String?): Map<Int, EpisodeMeta> {
         if (tvId == null || season <= 0) return emptyMap()
         val body = getText("$mainUrl/api/tv/$tvId/season/$season", referer) ?: return emptyMap()
         val arr = try {
@@ -142,14 +162,36 @@ class IdnMovieProvider : MainAPI() {
         } catch (e: Exception) {
             null
         } ?: return emptyMap()
-        val out = HashMap<Int, String?>()
+        val out = HashMap<Int, EpisodeMeta>()
         for (i in 0 until arr.length()) {
             val e = arr.optJSONObject(i) ?: continue
             val n = e.optInt("number", e.optInt("episode", i + 1))
-            if (n > 0) out[n] = tmdbSize(posterOf(e.optString("still")), "w500")
+            if (n <= 0) continue
+            val rawName = e.optString("name").trim().removePrefix("\"")
+            val rawOv = e.optString("overview").trim()
+            // "Episode 7" bukan judul -- itu placeholder generator situs.
+            val nameReal = rawName.takeIf { it.isNotEmpty() && !it.matches(PLACEHOLDER_EP) }
+            val ovReal = rawOv.takeIf { it.isNotEmpty() }
+            val bits = ArrayList<String>(3)
+            e.optString("air_date").takeIf { it.isNotBlank() && it != "null" }?.let { bits.add("Tayang: $it") }
+            e.optInt("runtime").takeIf { it > 0 }?.let { bits.add("$it menit") }
+            out[n] = EpisodeMeta(
+                nameReal,
+                ovReal,
+                tmdbSize(posterOf(e.optString("still")), "w500"),
+                bits.takeIf { it.isNotEmpty() }?.joinToString(" • "),
+            )
         }
         return out
     }
+
+    /**
+     * Still per-episode saja, untuk jalur yang tidak butuh title/deskripsi.
+     * Dibungkus seasonMeta supaya hanya ada satu parse per season (HTTP ini
+     * mahal: satu request per season per opening detail).
+     */
+    private fun seasonStills(tvId: Long?, season: Int, referer: String?): Map<Int, String?> =
+        seasonMeta(tvId, season, referer).mapValues { it.value.still }
 
     // ------------------------------------------------------------- RSC helpers
 
@@ -295,6 +337,42 @@ class IdnMovieProvider : MainAPI() {
     )
 
     /**
+     * Genre = endpoint katalog yang dipanggil chunk JS halaman genre itu sendiri,
+     * bukan dari enum CloudStream dan bukan tebakan. `category` diambil dari
+     * props RSC tiap halaman, jadi nilainya bukan hasil karangan.
+     *
+     * Hasil probe live (HTTP 200, {items,hasMore}, page 1-based):
+     *   /anime           -> /api/anime/catalog?category=0   25/halaman, p1 != p2
+     *   /drama-korea     -> /api/drakor/catalog?category=0   20/halaman, p1 != p2
+     *   /drama-thailand  -> /api/sflix/catalog?category=14  12/halaman, p1 != p2
+     *   /drama-indonesia -> /api/sflix/catalog?category=2   10/halaman
+     *   /vivamax         -> /api/vivamax/new?page=N         30/halaman, p1 != p2
+     *
+     * CATATAN /drama-china: HAPUS. Chunk halaman itu memakai endpoint
+     * /api/drakor/catalog dengan category dari nav, tapi halaman /drama-china
+     * sendiri tidak mengirim category apa pun ke server -- isinya cuma carousel
+     * drama China tanpa `initialItems` yang bisa dipaginasi. Menempelkannya ke
+     * Drama Korea akan menampilkan konten yang salah, jadi tidak di-starter-kan.
+     *
+     * CATATAN hasMore: /drama-indonesia membalas hasMore=true di halaman 1 tapi
+     * halaman 2 kosong. [catalogPage] tetap mempercayai hasMore per respons,
+     * jadi satu page kosong akan menghentikan scroll dengan sendirinya.
+     */
+    private data class Genre(
+        val label: String,
+        val path: String,
+        val endpoint: String,
+    )
+
+    private val genres = listOf(
+        Genre("Anime", "/anime", "/api/anime/catalog?category=0&page={}"),
+        Genre("Drama Korea", "/drama-korea", "/api/drakor/catalog?category=0&page={}"),
+        Genre("Drama Thailand", "/drama-thailand", "/api/sflix/catalog?category=14&page={}"),
+        Genre("Drama Indonesia", "/drama-indonesia", "/api/sflix/catalog?category=2&page={}"),
+        Genre("Vivamax", "/vivamax", "/api/vivamax/new?page={}"),
+    )
+
+    /**
      * Kartu listing diparse dari RSC: setiap kartu diawali `{"id":"<slug>","title":"`.
      * `id` di sini SUDAH berupa slug playback — inilah sumber katalog yang benar.
      */
@@ -335,20 +413,71 @@ class IdnMovieProvider : MainAPI() {
     }
 
     /**
-     * URL detail. TV harus ke /tv/{slug} — kalau落到 /movie/{slug}, [load] akan
-     * mendeteksi "/tv/" tidak ada dan mengembalikan MovieLoadResponse tanpa episode.
+     * URL detail. TV harus ke /tv/{slug} -- kalau jatuh ke /movie/{slug}, [load]
+     * akan mendeteksi "/tv/" tidak ada dan mengembalikan MovieLoadResponse
+     * tanpa episode.
+     *
+     * Slug numerik (sflix/drabox, mis. 42000027287 atau 4984477719137248960)
+     * TIDAK punya halaman web -- kontennya hanya lewat /sfl/{id}. Jadi slug
+     * seperti itu dipetakan ke /sfl/{id} supaya playback-nya tetap jalan.
      */
     private fun pageUrl(slug: String, type: TvType): String = when {
         slug.startsWith("sfl-") -> "$mainUrl/sfl/${slug.removePrefix("sfl-")}"
+        slug.all { it.isDigit() } && slug.length > 8 -> "$mainUrl/sfl/$slug"
         type == TvType.TvSeries -> "$mainUrl/tv/$slug"
         else -> "$mainUrl/movie/$slug"
     }
 
     private fun cardResponse(c: Card): SearchResponse =
-        newMovieSearchResponse(c.title, pageUrl(c.slug, c.type), TvType.Movie) {
+        newMovieSearchResponse(c.title, pageUrl(c.slug, c.type), c.type) {
             this.posterUrl = c.poster
             this.year = c.year
         }
+
+    // ---------------------------------------------------------------- genres
+
+    /**
+     * Satu request per halaman genre: parse kartu + `hasMore` dari body yang
+     * sama, jadi tidak ada probe kedua hanya untuk cek "ada halaman berikutnya".
+     * `hasNext` di [getMainPage] diteruskan apa adanya dari `hasMore`, jadi
+     * scroll berhenti sendiri di halaman terakhir tanpa state internal.
+     */
+    private fun catalogPage(g: Genre, page: Int): Pair<List<Card>, Boolean> {
+        val url = mainUrl + g.endpoint.replace("{}", page.toString())
+        val body = getText(url, "$mainUrl${g.path}")
+            ?: return Pair(emptyList<Card>(), false)
+        val root = try {
+            JSONObject(body)
+        } catch (e: Exception) {
+            return emptyList<Card>() to false
+        }
+        val arr = root.optJSONArray("items")
+        if (arr == null) return emptyList<Card>() to false
+        val out = ArrayList<Card>(arr.length())
+        for (i in 0 until arr.length()) {
+            val e = arr.optJSONObject(i) ?: continue
+            val title = e.optString("title").trim()
+            // identitas playback = slug. Untuk Vivamax, `id` hanya UUID internal
+            // dan bukan slug, jadi harus pakai gudangfilm_slug dulu.
+            val slug = e.optString("slug").ifBlank { e.optString("gudangfilm_slug") }.trim()
+            if (title.isEmpty() || slug.isEmpty()) continue
+            out.add(
+                Card(
+                    slug = slug,
+                    title = title,
+                    poster = posterOf(e.optString("posterUrl").ifBlank { e.optString("posterPath") }),
+                    year = e.optString("year").toIntOrNull(),
+                    // "TvSeries" adalah nilai yang benar-benar dipakai server, bukan
+                    // "Movie" -- mencocokkan hanya "Movie" akan salah klasifikasi.
+                    type = if (e.optString("type") == "Movie") TvType.Movie else TvType.TvSeries,
+                )
+            )
+        }
+        // hasMore dipotong dengan "halaman ini benar-benar punya isi": beberapa
+        // genre membalas hasMore=true lalu halaman berikutnya kosong, dan tanpa
+        // syarat ini scroll akan requesting page kosong tanpa henti.
+        return out to (root.optBoolean("hasMore") && out.isNotEmpty())
+    }
 
     // --------------------------------------------------------------- mainpage
 
@@ -372,6 +501,23 @@ class IdnMovieProvider : MainAPI() {
         "Papan Peringkat",
     )
 
+    /**
+     * Genre jadi section homepage, dipaginasi.
+     *
+     * CATATAN API: SDK cloudstream3:pre-release di repo ini TIDAK punya
+     * `getCatalog`/`FilterData`/`CatalogPage`/`HomeSection` (compile error
+     * "overrides nothing"). Section dinamis cukup dengan menambah
+     * `MainPageData` ke [mainPage]; CloudStream lalu memanggil
+     * getMainPage(page = 2, ...) lagi saat scroll -- itu infinite scroll-nya,
+     * dengan `hasNext` nyambung dari `hasMore` server, bukan counter internal.
+     *
+     * `data` diisi path genre (bukan URL absolut) supaya [getMainPage] bisa
+     * mencocokkan section tanpa hardcode label.
+     */
+    private val genreRequests: List<MainPageData> = genres.map { g ->
+        MainPageData(name = g.label, data = g.path)
+    }
+
     override val mainPage = mainPageOf(
         "movie" to "Movie",
         "tv" to "TV Series",
@@ -382,7 +528,7 @@ class IdnMovieProvider : MainAPI() {
         "serialtv" to "Serial TV",
         "update" to "Update",
         "peringkat" to "Papan Peringkat",
-    )
+    ) + genreRequests
 
     /** Kartu di antara dua batas karakter pada payload RSC root. */
     private fun cardsInSpan(data: String, from: Int, to: Int): List<Card> {
@@ -448,6 +594,18 @@ class IdnMovieProvider : MainAPI() {
             }
             "Movie" -> movieCards().map { cardResponse(it) }
             else -> {
+                // Genre lebih dulu: katalognya punya `hasMore` sendiri, jadi tidak
+                // boleh lewat parsing RSC homepage yang cuma menampilkan sekali.
+                // Dicocokkan dari `request.data` (path), bukan label.
+                val genre = genres.firstOrNull { it.path == request.data }
+                if (genre != null) {
+                    val got = catalogPage(genre, page)
+                    return newHomePageResponse(
+                        request.name,
+                        got.first.map { cardResponse(it) },
+                        got.second,
+                    )
+                }
                 val data = rsc(getText("$mainUrl/")) ?: return newHomePageResponse(request.name, emptyList())
                 // urutkan semua heading, lalu tiap section mengambil rentang sampai
                 // heading berikutnya — ini yang membatasi "Film Terbaru" agar tidak
@@ -582,15 +740,20 @@ class IdnMovieProvider : MainAPI() {
                 counts.add(season to ec)
             }
             for ((sn, ec) in counts.sortedBy { it.first }) {
-                val stills = seasonStills(tvId, sn, url)
+                val meta = seasonMeta(tvId, sn, url)
                 for (n in 1..ec) {
+                    val m = meta[n]
                     episodes.add(
                         newEpisode("$url|s=$sn|ep=$n") {
-                            this.name = "Episode $n"
+                            // title: pakai nama asli kalau ada, kalau tidak
+                            // "Episode N" + konteks season (season 3 > "Episode 7")
+                            this.name = m?.name ?: "Episode $n"
                             this.episode = n
                             this.season = sn
                             // still per-episode; poster seri hanya fallback
-                            this.posterUrl = stills[n] ?: poster
+                            this.posterUrl = m?.still ?: poster
+                            // deskripsi: overview asli, atau fakta faktual
+                            this.description = m?.overview ?: m?.facts
                         }
                     )
                 }
