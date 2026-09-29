@@ -123,33 +123,49 @@ def main():
     print("push main:", [l for l in r.stderr.splitlines() if "main" in l][-1:])
 
     # 4. branch builds (root-level artifact) — tetap disinkronkan
-    # Artefak harus distage ke /tmp SEBELUM checkout: path build output hanya ada
-    # di branch main, dan setelah `git checkout` ke branch builds path itu hilang
-    # (checkout menimpa working tree, termasuk tools/ yang tidak ada di sana).
+    # PAKAI worktree terpisah, bukan `git checkout`. Checkout di working tree
+    # utama gagal (atau diam-diam damaging) kalau ada file uncommitted yang
+    # tidak ada di branch tujuan, dan artifact build output ikut hilang.
+    # Fetch DULU dengan refspec EKSPLISIT, baru buat worktree.
+    # `git fetch origin builds` saja TIDAK memperbarui ref remote-tracking
+    # origin/builds pada repo ini, jadi `git rev-parse origin/builds` mengembalikan
+    # tip lama -> worktree dibangun dari base salah -> push ditolak
+    # (non-fast-forward / lease "stale info") padahal remote sudah benar.
+    sh("git fetch --force origin builds:refs/remotes/origin/builds")
+    base = sh("git rev-parse origin/builds").stdout.strip()
     staged = f"/tmp/idn_v{version}.cs3"
     open(staged, "wb").write(blob)
-    sh("git fetch origin builds")
-    sh("git checkout -B builds-sync origin/builds")
-    # helper ikut hilang setelah checkout -> stage ke /tmp juga
+    wt = "/tmp/idn_builds_wt"
+    sh(f"git worktree remove --force {wt} 2>/dev/null; rm -rf {wt}")
+    r = sh(f"git worktree add --detach {wt} {base}")
+    if r.returncode != 0:
+        raise SystemExit(f"FAIL: worktree builds gagal\n{r.stderr}")
+    # helper ditulis ulang ke /tmp karena tidak ikut terbawa worktree
     helper = f"/tmp/sync_builds_{version}.py"
     open(helper, "w").write(open("/opt/data/work/tools/sync_builds_branch.py").read())
-    r = sh(f"python3 {helper} {staged} {version}")
+    r = sh(f"python3 {helper} {staged} {version}", cwd=wt)
     print("  branch builds:", (r.stdout + r.stderr).strip())
     if r.returncode != 0:
-        sh("git checkout main")
+        sh(f"git worktree remove --force {wt}")
         raise SystemExit(f"FAIL: sync branch builds gagal\n{r.stderr}")
-    sh(f'git add {INTERNAL_NAME}.cs3 plugins.json')
-    r = sh(f'git commit -m "Builds: IdnMovieProvider v{version} artifact {size}B (builds branch mirror)"')
+    r = sh(f"git add {INTERNAL_NAME}.cs3 plugins.json", cwd=wt)
+    r = sh(f'git commit -m "Builds: IdnMovieProvider v{version} artifact {size}B (builds branch mirror)"', cwd=wt)
     out = (r.stdout + r.stderr).strip()
     if r.returncode != 0 and "nothing to commit" not in out and "no changes added to commit" not in out:
-        sh("git checkout main")
+        sh(f"git worktree remove --force {wt}")
         raise SystemExit(f"FAIL: commit branch builds gagal\n{out}")
-    r = sh("git push origin HEAD:builds")
+    # `--force-with-lease` (bukan --force): branch builds di-reset dari mirror
+    # sehingga history diverge dari remote. Lease menolak kalau remote berubah
+    # di luar deploy ini — jadi tetap aman.
+    # `--force-with-lease=refs/heads/builds:<sha>` dengan SHA eksplisit yang kita
+    # baca sendiri SEBELUM commit. Tanpa argumen eksplisit git melaporkan
+    # "stale info" karena lease default-nya memakai ref cache yang basi.
+    r = sh(f"git push --force-with-lease=refs/heads/builds:{base} origin HEAD:builds", cwd=wt)
+    sh(f"git worktree remove --force {wt}")
     if r.returncode != 0:
-        sh("git checkout main")
-        raise SystemExit(f"FAIL: push builds gagal\n{r.stderr}")
-    print("  push builds: ok")
-    sh("git checkout main")
+        raise SystemExit(f"FAIL: push builds gagal (base {base[:12]})\n{r.stderr}")
+    print(f"  push builds: ok (force-with-lease, base {base[:12]})")
+    print("  main branch: tidak disentuh (worktree terpisah)")
 
     # 5. verifikasi lewat GitHub API (bukan raw CDN)
     print("\n=== verifikasi GitHub contents API ===")
