@@ -172,14 +172,21 @@ def main():
     ok = True
     for ref, path in [("main", f"builds/{INTERNAL_NAME}.cs3"),
                       ("main", "builds/plugins.json"),
-                      ("builds", INTERNAL_NAME),
+                      ("builds", f"{INTERNAL_NAME}.cs3"),
                       ("builds", "plugins.json")]:
         url = f"https://api.github.com/repos/{REPO}/contents/{path}?ref={ref}"
         time.sleep(0.4)
-        with urllib.request.urlopen(urllib.request.Request(
-                url, headers={"User-Agent": "curl/8", "Accept": "application/vnd.github.raw+json"}),
-                timeout=40) as rr:
-            content = rr.read()
+        try:
+            with urllib.request.urlopen(urllib.request.Request(
+                    url, headers={"User-Agent": "curl/8", "Accept": "application/vnd.github.raw+json"}),
+                    timeout=40) as rr:
+                content = rr.read()
+        except Exception as e:
+            # Satu jalur gagal TIDAK boleh menjatuhkan proses sebelum jalur lain
+            # ikut dicek -- cukup report sebagai mismatch lalu lanjut.
+            print(f"  {ref:6}/{path:28} FETCH-ERROR {type(e).__name__}: {e}")
+            ok = False
+            continue
         if path.endswith(".cs3"):
             got = hashlib.sha256(content).hexdigest()
             good = got == digest and len(content) == size
