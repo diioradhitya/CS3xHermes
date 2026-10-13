@@ -50,13 +50,16 @@ subprojects {
         }
 
         compileOptions {
-            sourceCompatibility = JavaVersion.VERSION_1_8
-            targetCompatibility = JavaVersion.VERSION_1_8
+            sourceCompatibility = JavaVersion.VERSION_11
+            targetCompatibility = JavaVersion.VERSION_11
         }
 
         tasks.withType<KotlinJvmCompile> {
             compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_1_8)
+                // cloudstream3:pre-release is compiled with JVM target 11, so this must be 11 too.
+                // At JVM_1_8, inlining AppUtils.tryParseJson fails with:
+                //   "Cannot inline bytecode built with JVM target 11 into bytecode that is being built with JVM target 1.8"
+                jvmTarget.set(JvmTarget.JVM_11)
                 freeCompilerArgs.addAll(
                     "-Xno-call-assertions",
                     "-Xno-param-assertions",
