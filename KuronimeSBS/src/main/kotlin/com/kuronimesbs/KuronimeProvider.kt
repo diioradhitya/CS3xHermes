@@ -1,4 +1,4 @@
-package com.kuronime
+package com.kuronimesbs
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -29,7 +29,7 @@ class KuronimeProvider : MainAPI() {
     private val apiBase = "https://animeku.org/api/v9/sources"
     private val aesKey = "3&!Z0M,VIZ;dZW=="
 
-    // Homepage cards use class "bsu", search results use "bs" — match both.
+    // Homepage cards use class "bsu", search results use "bs" â€” match both.
     private val cardSelector = "article.bsu, article.bs"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -99,7 +99,7 @@ class KuronimeProvider : MainAPI() {
         val blob = Regex("""_0xa100d42aa\s*=\s*["']([^"']+)["']""").find(scriptTexts)
             ?.groupValues?.get(1) ?: return false
 
-        // Call animeku API (requires JSON body — okhttp langsung)
+        // Call animeku API (requires JSON body â€” okhttp langsung)
         val body = JSONObject().put("id", blob).toString()
         val response = try {
             val client = OkHttpClient()

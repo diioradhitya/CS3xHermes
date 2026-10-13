@@ -1,4 +1,4 @@
-package com.kuronime
+package com.kuronimesbs
 
 import android.content.Context
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
