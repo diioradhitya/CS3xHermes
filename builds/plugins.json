@@ -170,25 +170,6 @@
         "name": "KlikXXi"
     },
     {
-        "fileHash": "sha256-1135955bc0a3395804903f6c8bc77dfa35dd2e022309cd6e3074958d75ea9e52",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 15872,
-        "status": 1,
-        "language": "id",
-        "authors": [
-            "Dio R"
-        ],
-        "tvTypes": [
-            "Anime"
-        ],
-        "version": 4,
-        "internalName": "KuronimeSBS",
-        "description": "KuroNime SBS - Anime Indonesia (kuronime.sbs)",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/KuronimeSBS.cs3",
-        "name": "KuronimeSBS"
-    },
-    {
         "fileHash": "sha256-5ebacb150da01629fc54d02b121ab819fcdd3086fa129145bffc96d14c9becb7",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
