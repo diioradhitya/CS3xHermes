@@ -23,14 +23,19 @@ class LayarAsia : MainAPI() {
     // section's "View All" target so ordering matches what the site shows
     // (most recently updated / added) instead of an alphabetical slug browse.
     // Pagination is &page=<n>; the site returns a fresh set of 20 each time.
+    //
+    // The brackets in genre[]/country[] are percent-encoded on the wire, and
+    // "%5B" is not a valid formatter conversion -- String.format would throw
+    // UnknownFormatConversionException on every one of those rows. Escape them
+    // as %%5B so the formatter emits the literal text.
     override val mainPage = mainPageOf(
         "series/?status=&type=&order=update&page=%d" to "Baru Dirilis",
         "series/?type=movie&order=latest&page=%d" to "Movie",
-        "series/?genre%5B%5D=drama-korea&status=&type=&order=update&page=%d" to "Drama Korea",
-        "series/?country%5B%5D=china&status=&type=&order=update&page=%d" to "Drama China",
-        "series/?genre%5B%5D=varshow&order=update&page=%d" to "Variety Show",
-        "series/?genre%5B%5D=series-barat&order=update&page=%d" to "Series Barat",
-        "series/?country%5B%5D=thailand&status=&type=&order=update&page=%d" to "Series Thailand"
+        "series/?genre%%5B%%5D=drama-korea&status=&type=&order=update&page=%d" to "Drama Korea",
+        "series/?country%%5B%%5D=china&status=&type=&order=update&page=%d" to "Drama China",
+        "series/?genre%%5B%%5D=varshow&order=update&page=%d" to "Variety Show",
+        "series/?genre%%5B%%5D=series-barat&order=update&page=%d" to "Series Barat",
+        "series/?country%%5B%%5D=thailand&status=&type=&order=update&page=%d" to "Series Thailand"
     )
 
     companion object {
