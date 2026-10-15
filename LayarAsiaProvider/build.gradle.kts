@@ -5,18 +5,20 @@
 // home page shows only seven sections, so v3 mirrors those and keeps the
 // site's ordering instead of a slug browse. v3 percent-encoded genre[] as
 // %5B%5D, which String.format read as a conversion specifier and threw on, so
-// five of the seven rows never rendered.
-version = 4
+// five of the seven rows never rendered. v5 classifies by the page's own
+// "Tipe" field instead of the href, because movies also live under /series/
+// and were being loaded as one-episode series ("Coming soon").
+version = 5
 
 cloudstream {
     description = "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download"
     language = "id"
     authors = listOf("Dio R")
     status = 2
+    // Sampling all seven home sections found only "Tipe: Movie" and
+    // "Tipe: Drama"; the site publishes no anime or AsianDrama titles.
     tvTypes = listOf(
         "Movie",
-        "AsianDrama",
-        "TvSeries",
-        "Anime"
+        "TvSeries"
     )
 }

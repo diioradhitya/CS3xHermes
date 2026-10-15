@@ -12,11 +12,12 @@ class LayarAsia : MainAPI() {
     override var name = "LayarAsia"
     override val hasMainPage = true
     override var lang = "id"
+    // The site only distinguishes movies and dramas: every title reports
+    // "Tipe: Movie" or "Tipe: Drama" in div.spe, and no listing returned Anime
+    // or AsianDrama across the seven sections sampled.
     override val supportedTypes = setOf(
         TvType.Movie,
-        TvType.TvSeries,
-        TvType.AsianDrama,
-        TvType.Anime
+        TvType.TvSeries
     )
 
     // Mirrors the seven sections the site's own home page renders, using each
@@ -41,9 +42,8 @@ class LayarAsia : MainAPI() {
     companion object {
         private val EPISODE_IN_TEXT = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
 
-        fun getType(t: String): TvType = when (t.lowercase()) {
+        fun getType(t: String): TvType = when (t.lowercase().trim()) {
             "movie", "film" -> TvType.Movie
-            "anime", "donghua" -> TvType.Anime
             "tv series", "tv show", "drama", "kdrama", "cdrama", "thai drama",
             "jdrama", "dorama", "mini series", "series", "variety", "varshow" -> TvType.TvSeries
             else -> TvType.TvSeries
@@ -86,10 +86,12 @@ class LayarAsia : MainAPI() {
         val epsText = selectFirst("span.epx")?.text()?.trim()
         val eps = epsText?.let { EPISODE_IN_TEXT.find(it)?.groupValues?.getOrNull(1)?.toIntOrNull() }
 
+        // On listing pages div.typez carries the type ("Movie" / "Drama").
+        // Prefer it over the href, since movies also live under /series/.
         val typeLabel = selectFirst("div.typez")?.text()?.trim()
         val tvType = when {
-            eps != null -> TvType.TvSeries
             typeLabel != null -> getType(typeLabel)
+            eps != null -> TvType.TvSeries
             href.contains("/series/") -> TvType.TvSeries
             else -> TvType.Movie
         }
@@ -144,10 +146,15 @@ class LayarAsia : MainAPI() {
             ?.value
             ?.toIntOrNull()
 
+        // The site serves movies and dramas from the same /series/<slug>/ path,
+        // so the URL cannot tell them apart. The "Tipe" row is the only
+        // reliable signal and must win: classifying by URL first turned every
+        // movie into a TvSeries with one bogus episode, which Cloudstream then
+        // rendered as "Coming soon".
         val typeLabel = info["Tipe"]
         val tvType = when {
-            url.contains("/series/") -> TvType.TvSeries
             typeLabel != null -> getType(typeLabel)
+            url.contains("/series/") -> TvType.TvSeries
             else -> TvType.Movie
         }
 
@@ -165,6 +172,18 @@ class LayarAsia : MainAPI() {
 
         val recommendations = document.select("article.bs").mapNotNull { it.toSearchResult() }
 
+        // A movie's /series/ page has no player; the single eplister row links
+        // to the page that carries the embed. Series link their episodes
+        // directly. .epl-num is a plain number for most series, a range like
+        // "11-24" when several episodes share a page, and "HD" for movies.
+        val watchUrl = if (tvType == TvType.Movie) {
+            document.selectFirst("div.eplister ul li a[href], div.lastend div.inepcx a[href]")
+                ?.attr("href")
+                ?.takeIf { it.isNotBlank() && it != "#" }
+                ?.let { fixUrl(it) }
+                ?: url
+        } else url
+
         val episodes = if (tvType == TvType.TvSeries) {
             // Both the "latest" strip (div.lastend) and the full table
             // (div.eplister) link the same episode pages, so dedupe on href
@@ -176,7 +195,10 @@ class LayarAsia : MainAPI() {
                     if (raw.isBlank() || raw == "#") return@mapNotNull null
                     val href = fixUrl(raw)
                     val label = eps.text()
-                    val episode = eps.selectFirst(".epl-num")?.text()?.trim()?.toIntOrNull()
+                    val num = eps.selectFirst(".epl-num")?.text()?.trim().orEmpty()
+                    // "11-24" and "24 End" both start with the first number;
+                    // "HD" has no digits at all and only appears on movies.
+                    val episode = Regex("\\d+").find(num)?.groupValues?.getOrNull(0)?.toIntOrNull()
                         ?: EPISODE_IN_TEXT.find(label)?.groupValues?.getOrNull(1)?.toIntOrNull()
                         ?: return@mapNotNull null
                     val season = Regex("Season\\s*(\\d+)", RegexOption.IGNORE_CASE)
@@ -198,7 +220,7 @@ class LayarAsia : MainAPI() {
         } else emptyList()
 
         return if (tvType == TvType.Movie) {
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
+            newMovieLoadResponse(title, url, TvType.Movie, watchUrl) {
                 posterUrl = poster
                 this.year = year
                 plot = description
