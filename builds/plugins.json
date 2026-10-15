@@ -17,7 +17,7 @@
         "version": 1,
         "internalName": "Dutamovie",
         "description": "DutaMovie - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Dutamovie.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Dutamovie.cs3",
         "name": "Dutamovie"
     },
     {
@@ -38,7 +38,7 @@
         "version": 1,
         "internalName": "Filmkita",
         "description": "Filmkita - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Filmkita.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Filmkita.cs3",
         "name": "Filmkita"
     },
     {
@@ -59,7 +59,7 @@
         "version": 1,
         "internalName": "Filmlokal",
         "description": "Filmlokal - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Filmlokal.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Filmlokal.cs3",
         "name": "Filmlokal"
     },
     {
@@ -81,7 +81,7 @@
         "version": 14,
         "internalName": "HarufilmProvider",
         "description": "Harufilm - Streaming Film Indonesia",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/HarufilmProvider.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/HarufilmProvider.cs3",
         "name": "HarufilmProvider"
     },
     {
@@ -103,7 +103,7 @@
         "version": 9,
         "internalName": "IdnMovieProvider",
         "description": "IDNMovie - Nonton Film, TV, Anime Sub Indo (idnmovie.com)",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/IdnMovieProvider.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/IdnMovieProvider.cs3",
         "name": "IdnMovieProvider"
     },
     {
@@ -124,7 +124,7 @@
         "version": 1,
         "internalName": "Indomax",
         "description": "Indomax - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Indomax.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Indomax.cs3",
         "name": "Indomax"
     },
     {
@@ -145,7 +145,7 @@
         "version": 7,
         "internalName": "KawanfilmProvider",
         "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/KawanfilmProvider.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/KawanfilmProvider.cs3",
         "name": "KawanfilmProvider"
     },
     {
@@ -166,8 +166,30 @@
         "version": 1,
         "internalName": "KlikXXi",
         "description": "KlikXXi - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/KlikXXi.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/KlikXXi.cs3",
         "name": "KlikXXi"
+    },
+    {
+        "fileHash": "sha256-553c53837db6375b705053a75eb89c8d48a6d745febc107d387a31e5ff1060ef",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 31223,
+        "status": 2,
+        "language": "id",
+        "authors": [
+            "Dio R"
+        ],
+        "tvTypes": [
+            "Movie",
+            "AsianDrama",
+            "TvSeries",
+            "Anime"
+        ],
+        "version": 1,
+        "internalName": "LayarAsiaProvider",
+        "description": "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LayarAsiaProvider.cs3",
+        "name": "LayarAsiaProvider"
     },
     {
         "fileHash": "sha256-5ebacb150da01629fc54d02b121ab819fcdd3086fa129145bffc96d14c9becb7",
@@ -187,7 +209,7 @@
         "version": 1,
         "internalName": "LayarWarna",
         "description": "LayarWarna - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/LayarWarna.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LayarWarna.cs3",
         "name": "LayarWarna"
     },
     {
@@ -208,7 +230,7 @@
         "version": 1,
         "internalName": "Ngefilm",
         "description": "Ngefilm - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Ngefilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Ngefilm.cs3",
         "name": "Ngefilm"
     },
     {
@@ -229,7 +251,7 @@
         "version": 1,
         "internalName": "Nomat",
         "description": "Nomat - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Nomat.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Nomat.cs3",
         "name": "Nomat"
     },
     {
@@ -251,7 +273,7 @@
         "version": 6,
         "internalName": "OploverzProvider",
         "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/OploverzProvider.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/OploverzProvider.cs3",
         "name": "OploverzProvider"
     },
     {
@@ -271,7 +293,7 @@
         "version": 1,
         "internalName": "Pencurimovie",
         "description": "Pencurimovie \u2014 Streaming Film & Serial",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Pencurimovie.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Pencurimovie.cs3",
         "name": "Pencurimovie"
     },
     {
@@ -292,7 +314,7 @@
         "version": 1,
         "internalName": "Pusatfilm",
         "description": "PusatFilm - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Pusatfilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Pusatfilm.cs3",
         "name": "Pusatfilm"
     },
     {
@@ -313,7 +335,7 @@
         "version": 1,
         "internalName": "Pusatmovie",
         "description": "Pusatmovie - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Pusatmovie.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Pusatmovie.cs3",
         "name": "Pusatmovie"
     },
     {
@@ -334,7 +356,7 @@
         "version": 1,
         "internalName": "Sarangfilm",
         "description": "Sarangfilm - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Sarangfilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Sarangfilm.cs3",
         "name": "Sarangfilm"
     },
     {
@@ -355,7 +377,7 @@
         "version": 1,
         "internalName": "Savefilm",
         "description": "Savefilm - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Savefilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Savefilm.cs3",
         "name": "Savefilm"
     },
     {
@@ -376,29 +398,7 @@
         "version": 1,
         "internalName": "WGFilm21",
         "description": "WGFilm21 - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/WGFilm21.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/WGFilm21.cs3",
         "name": "WGFilm21"
-    },
-    {
-        "fileHash": "sha256-553c53837db6375b705053a75eb89c8d48a6d745febc107d387a31e5ff1060ef",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 31223,
-        "status": 1,
-        "language": "id",
-        "authors": [
-            "Dio R"
-        ],
-        "tvTypes": [
-            "Movie",
-            "AsianDrama",
-            "TvSeries",
-            "Anime"
-        ],
-        "version": 1,
-        "internalName": "LayarAsiaProvider",
-        "description": "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/LayarAsiaProvider.cs3",
-        "name": "LayarAsia"
     }
 ]
