@@ -132,7 +132,17 @@ class LayarAsia : MainAPI() {
         // Metadata lives in div.spe as "<b>Label:</b> value" pairs.
         val info = document.selectFirst("div.info-content div.spe")?.allElements
             ?.mapNotNull { row ->
-                val label = row.selectFirst("b")?.text()?.removeSuffix(":")?.trim() ?: return@mapNotNull null
+                // The <b> text is "Tipe:" with the colon still attached, so
+                // stripping has to happen before trimming -- otherwise the map
+                // key is "Tipe:" and every lookup by "Tipe" silently misses,
+                // which is what made v5/v6 fall through to the href guess and
+                // load every movie as a zero-episode series.
+                val label = row.selectFirst("b")?.text()
+                    ?.trim()
+                    ?.trimEnd(':')
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: return@mapNotNull null
                 val value = row.ownText() + row.select("a").joinToString("") { it.ownText() }
                 label to value.trim()
             }?.toMap()
@@ -152,7 +162,7 @@ class LayarAsia : MainAPI() {
         // reliable signal and must win: classifying by URL first turned every
         // movie into a TvSeries with one bogus episode, which Cloudstream then
         // rendered as "Coming soon".
-        val typeLabel = info["Tipe"]
+        val typeLabel = info["Tipe"] ?: info["Tipe:"]
         val tvType = when {
             typeLabel != null -> getType(typeLabel)
             url.contains("/series/") -> TvType.TvSeries

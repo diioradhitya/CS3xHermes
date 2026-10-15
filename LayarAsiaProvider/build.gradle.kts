@@ -11,7 +11,10 @@
 // "Coming soon" on device, so v6 adds temporary instrumentation: the parsed
 // Tipe value, resolved tvType, episode count and chosen watch URL are logged
 // under the "LayarAsia" tag so logcat shows what load() actually produced.
-version = 6
+// That log showed type='Tipe:' -- the <b> text keeps its colon, so the map key
+// was "Tipe:" and info["Tipe"] was always null. v7 strips the colon before
+// trimming so the lookup resolves.
+version = 7
 
 cloudstream {
     description = "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download"
