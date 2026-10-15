@@ -19,28 +19,18 @@ class LayarAsia : MainAPI() {
         TvType.Anime
     )
 
-    // The site serves these under /genres/<slug>/page/<n>/. The slugs below were
-    // taken from the site's own navigation menu; several of the previous
-    // entries (drama-china, tv-show, year/2026) no longer resolve at all.
+    // Mirrors the seven sections the site's own home page renders, using each
+    // section's "View All" target so ordering matches what the site shows
+    // (most recently updated / added) instead of an alphabetical slug browse.
+    // Pagination is &page=<n>; the site returns a fresh set of 20 each time.
     override val mainPage = mainPageOf(
-        "genres/drama-korea/page/%d/" to "Drama Korea",
-        "genres/chinese-drama/page/%d/" to "Drama China",
-        "genres/drama-thailand/page/%d/" to "Drama Thailand",
-        "genres/drama-jepang/page/%d/" to "Drama Jepang",
-        "genres/dorama/page/%d/" to "Dorama",
-        "genres/drama-turki/page/%d/" to "Drama Turki",
-        "genres/drama-filipina/page/%d/" to "Drama Filipina",
-        "genres/film-korea/page/%d/" to "Film Korea",
-        "genres/mini-series/page/%d/" to "Mini Series",
-        "genres/series-barat/page/%d/" to "Series Barat",
-        "genres/series-indo/page/%d/" to "Series Indo",
-        "genres/movie/page/%d/" to "Movie",
-        "genres/varshow/page/%d/" to "Variety Show",
-        "genres/anime/page/%d/" to "Anime",
-        "genres/donghua-terbaru/page/%d/" to "Donghua",
-        "genres/wuxia/page/%d/" to "Wuxia",
-        "genres/comedy/page/%d/" to "Comedy",
-        "genres/romance/page/%d/" to "Romance"
+        "series/?status=&type=&order=update&page=%d" to "Baru Dirilis",
+        "series/?type=movie&order=latest&page=%d" to "Movie",
+        "series/?genre%5B%5D=drama-korea&status=&type=&order=update&page=%d" to "Drama Korea",
+        "series/?country%5B%5D=china&status=&type=&order=update&page=%d" to "Drama China",
+        "series/?genre%5B%5D=varshow&order=update&page=%d" to "Variety Show",
+        "series/?genre%5B%5D=series-barat&order=update&page=%d" to "Series Barat",
+        "series/?country%5B%5D=thailand&status=&type=&order=update&page=%d" to "Series Thailand"
     )
 
     companion object {
@@ -62,7 +52,9 @@ class LayarAsia : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("$mainUrl/${request.data.format(page)}").document
-        val items = document.select("article.bs").mapNotNull { it.toSearchResult() }
+        val items = document.selectFirst("div.listupd")?.select("article.bs")
+            ?.mapNotNull { it.toSearchResult() }
+            .orEmpty()
         return newHomePageResponse(request.name, items)
     }
 
