@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import org.jsoup.nodes.TextNode
 import java.util.Base64
 
 class LayarAsia : MainAPI() {
@@ -130,21 +131,36 @@ class LayarAsia : MainAPI() {
             ?.fixImageQuality()
 
         // Metadata lives in div.spe as "<b>Label:</b> value" pairs.
-        val info = document.selectFirst("div.info-content div.spe")?.allElements
+        val info = document.selectFirst("div.info-content div.spe")
+            ?.select("span")
             ?.mapNotNull { row ->
-                // The <b> text is "Tipe:" with the colon still attached, so
-                // stripping has to happen before trimming -- otherwise the map
-                // key is "Tipe:" and every lookup by "Tipe" silently misses,
-                // which is what made v5/v6 fall through to the href guess and
-                // load every movie as a zero-episode series.
+                // Iterate the <span> wrappers, not allElements(): that list also
+                // contains the <b> elements themselves, and for a <b> the
+                // selectFirst("b") returns itself, so its ownText() is the bare
+                // label ("Tipe:"). toMap() keeps the last entry, so every value
+                // was overwritten by its own label and info["Tipe"] resolved to
+                // "Tipe:" instead of "Movie" -- which sent every movie down the
+                // href fallback and rendered it as a zero-episode series.
                 val label = row.selectFirst("b")?.text()
                     ?.trim()
                     ?.trimEnd(':')
                     ?.trim()
                     ?.takeIf { it.isNotEmpty() }
                     ?: return@mapNotNull null
-                val value = row.ownText() + row.select("a").joinToString("") { it.ownText() }
-                label to value.trim()
+                // ownText() on the whole row keeps the ", ," that separate the
+                // links, so read the children after the label instead.
+                val value = row.childNodes()
+                    .filter { it !is Element || (it as Element).tagName() != "b" }
+                    .joinToString("") {
+                        when (it) {
+                            is TextNode -> it.getWholeText().trim()
+                            is Element -> it.text().trim()
+                            else -> ""
+                        }
+                    }
+                    .replace(Regex("\\s*,\\s*"), ", ")
+                    .trim()
+                label to value
             }?.toMap()
             .orEmpty()
 

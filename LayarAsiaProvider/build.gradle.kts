@@ -11,10 +11,12 @@
 // "Coming soon" on device, so v6 adds temporary instrumentation: the parsed
 // Tipe value, resolved tvType, episode count and chosen watch URL are logged
 // under the "LayarAsia" tag so logcat shows what load() actually produced.
-// That log showed type='Tipe:' -- the <b> text keeps its colon, so the map key
-// was "Tipe:" and info["Tipe"] was always null. v7 strips the colon before
-// trimming so the lookup resolves.
-version = 7
+// That log kept showing type='Tipe:' because the map was built from
+// allElements(), which also yields the <b> labels themselves; a <b>'s
+// selectFirst("b") is itself, so its ownText() is the bare label and
+// toMap()'s last-wins dropped every real value. v8 iterates the <span>
+// wrappers instead.
+version = 8
 
 cloudstream {
     description = "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download"
