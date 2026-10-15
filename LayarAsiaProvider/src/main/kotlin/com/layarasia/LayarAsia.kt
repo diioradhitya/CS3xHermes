@@ -1,5 +1,6 @@
 package com.layarasia
 
+import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
@@ -158,6 +159,12 @@ class LayarAsia : MainAPI() {
             else -> TvType.Movie
         }
 
+        Log.i(
+            "LayarAsia",
+            "load url=$url type='$typeLabel' tvType=$tvType " +
+                "info=${info.keys} title='$title' eplRows=${document.select("div.eplister ul li a[href]").size}"
+        )
+
         val description = document.selectFirst("div.mindesc")?.text()?.trim()
         val rating = Regex("(\\d+(?:[.,]\\d+)?)\\s*/\\s*10").find(title)?.groupValues?.getOrNull(1)
             ?.replace(",", ".")?.toDoubleOrNull()?.toFloat()
@@ -219,6 +226,12 @@ class LayarAsia : MainAPI() {
             }.sortedBy { it.episode ?: Int.MAX_VALUE }
         } else emptyList()
 
+        Log.i(
+            "LayarAsia",
+            "result tvType=$tvType eps=${episodes.size} watch=$watchUrl " +
+                "returns=${if (tvType == TvType.Movie) "MovieLoadResponse" else "TvSeriesLoadResponse"}"
+        )
+
         return if (tvType == TvType.Movie) {
             newMovieLoadResponse(title, url, TvType.Movie, watchUrl) {
                 posterUrl = poster
@@ -259,6 +272,21 @@ class LayarAsia : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
+        val iframeSrcs = document
+            .select("div.player-embed iframe, div#pembed iframe, div.video-content iframe")
+            .mapNotNull { it.getIframeAttr() }
+        val mirrorSrcs = document
+            .select("select.mirror option[value], select[name=mirror] option[value]")
+            .mapNotNull { opt ->
+                val encoded = opt.attr("value")
+                if (encoded.length < 20) return@mapNotNull null
+                runCatching { String(Base64.getDecoder().decode(encoded), Charsets.UTF_8) }.getOrNull()
+            }
+            .filter { it.contains("iframe", ignoreCase = true) }
+            .mapNotNull { Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE).find(it)?.groupValues?.getOrNull(1) }
+
+        Log.i("LayarAsia", "loadLinks data=$data iframes=$iframeSrcs mirrors=$mirrorSrcs")
+
         val found = mutableSetOf<String>()
 
         // Suspend local function is not allowed, so take a suspend lambda.
@@ -283,11 +311,14 @@ class LayarAsia : MainAPI() {
                 if (decoded.contains("iframe", ignoreCase = true)) emit(decoded)
             }
 
-        document.select("a[href*='terabox'], a[href*='filemoon'], a[href*='fileditch'], a[href*='mirror'], a[href$='.mp4'], a[href*='.m3u8']")
-            .forEach { link ->
-                val href = link.attr("href").trim()
-                if (href.isNotBlank()) loadExtractor(fixUrl(href), data, subtitleCallback, callback)
-            }
+        val downloadSrcs = document
+            .select("a[href*='terabox'], a[href*='filemoon'], a[href*='fileditch'], a[href*='mirror'], a[href$='.mp4'], a[href*='.m3u8']")
+            .map { it.attr("href").trim() }
+            .filter { it.isNotBlank() }
+
+        downloadSrcs.forEach { loadExtractor(fixUrl(it), data, subtitleCallback, callback) }
+
+        Log.i("LayarAsia", "loadLinks emitted=${found.size} downloads=$downloadSrcs")
 
         return true
     }

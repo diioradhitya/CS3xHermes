@@ -7,8 +7,11 @@
 // %5B%5D, which String.format read as a conversion specifier and threw on, so
 // five of the seven rows never rendered. v5 classifies by the page's own
 // "Tipe" field instead of the href, because movies also live under /series/
-// and were being loaded as one-episode series ("Coming soon").
-version = 5
+// and were being loaded as one-episode series ("Coming soon"). v5 still shows
+// "Coming soon" on device, so v6 adds temporary instrumentation: the parsed
+// Tipe value, resolved tvType, episode count and chosen watch URL are logged
+// under the "LayarAsia" tag so logcat shows what load() actually produced.
+version = 6
 
 cloudstream {
     description = "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download"
