@@ -484,12 +484,20 @@ class ByseExtractor : ExtractorApi() {
         }
         Log.d(TAG, "stream URL: ${streamUrl.take(80)}...")
 
-        M3u8Helper.generateM3u8(
-            name,
-            streamUrl,
-            refererUrl,
-            headers = mapOf("Referer" to "$siteOrigin/e/$code/", "User-Agent" to ua)
-        ).forEach(callback)
+        // Hand the master playlist to the player as a single link rather than
+        // expanding it with generateM3u8: that helper emits one ExtractorLink per
+        // variant, so Cloudstream listed the resolutions as separate sources
+        // instead of letting ExoPlayer pick and exposing them as video tracks.
+        callback(
+            newExtractorLink(
+                name,
+                name,
+                streamUrl
+            ) {
+                this.referer = refererUrl
+                this.headers = mapOf("Referer" to "$siteOrigin/e/$code/", "User-Agent" to ua)
+            }
+        )
     }
 }
 
