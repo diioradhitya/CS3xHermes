@@ -15,8 +15,11 @@
 // allElements(), which also yields the <b> labels themselves; a <b>'s
 // selectFirst("b") is itself, so its ownText() is the bare label and
 // toMap()'s last-wins dropped every real value. v8 iterates the <span>
-// wrappers instead.
-version = 8
+// wrappers instead. v9 adds ByseExtractor for the bysesukior.com /
+// bysetayico.com embeds, which carry a PoW challenge and an AES-GCM payload;
+// the old UPNShare/HydraX/StreamP2P/etc registrations never matched anything
+// this site serves.
+version = 9
 
 cloudstream {
     description = "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download"

@@ -9,12 +9,10 @@ class LayarAsiaPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(LayarAsia())
 
-        registerExtractorAPI(UPNShare())
-        registerExtractorAPI(HydraX())
-        registerExtractorAPI(StreamP2P())
-        registerExtractorAPI(Terabox())
-        registerExtractorAPI(FileMoon())
-        registerExtractorAPI(Fileditch())
-        registerExtractorAPI(Mirrored())
+        // Scanned the seven home sections: the site only ever hands out two
+        // embed families, both Byse-backed.
+        //   bysesukior.com / bysetayico.com  -> handled here
+        //   layarasia.upns.live              -> no extractor yet
+        registerExtractorAPI(ByseExtractor())
     }
 }
