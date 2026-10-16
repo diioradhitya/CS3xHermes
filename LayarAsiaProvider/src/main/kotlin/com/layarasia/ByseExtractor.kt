@@ -484,20 +484,56 @@ class ByseExtractor : ExtractorApi() {
         }
         Log.d(TAG, "stream URL: ${streamUrl.take(80)}...")
 
-        // Hand the master playlist to the player as a single link rather than
-        // expanding it with generateM3u8: that helper emits one ExtractorLink per
-        // variant, so Cloudstream listed the resolutions as separate sources
-        // instead of letting ExoPlayer pick and exposing them as video tracks.
+        val streamHeaders = mapOf("Referer" to "$siteOrigin/e/$code/", "User-Agent" to ua)
+
+        // These masters carry one real variant plus an #EXT-X-I-FRAME-STREAM-INF
+        // trick-play track, and both report the same RESOLUTION. ExoPlayer lists
+        // both as video tracks, so the track selector showed the resolution
+        // twice. Point at the variant itself when there is only one: there is
+        // nothing to pick between anyway, and the duplicate disappears.
+        val finalUrl = resolveSingleVariant(streamUrl, streamHeaders)
+        Log.d(TAG, "final URL: ${finalUrl.take(80)}...")
+
         callback(
             newExtractorLink(
                 name,
                 name,
-                streamUrl
+                finalUrl
             ) {
                 this.referer = refererUrl
-                this.headers = mapOf("Referer" to "$siteOrigin/e/$code/", "User-Agent" to ua)
+                this.headers = streamHeaders
             }
         )
+    }
+
+    /**
+     * Returns the variant playlist URL when [masterUrl] has exactly one real
+     * rendition, otherwise [masterUrl] untouched so the player keeps the full
+     * ladder for its quality selector.
+     */
+    private fun resolveSingleVariant(masterUrl: String, headers: Map<String, String>): String {
+        val text = httpGet(masterUrl, headers) ?: return masterUrl
+        val variants = mutableListOf<String>()
+        val lines = text.lineSequence()
+        var pending = false
+        for (line in lines) {
+            val t = line.trim()
+            when {
+                t.startsWith("#EXT-X-STREAM-INF:") -> pending = true
+                t.startsWith("#EXT-X-I-FRAME-STREAM-INF") -> Unit // trick-play, not a rendition
+                t.isEmpty() || t.startsWith("#") -> Unit
+                pending -> {
+                    variants += t
+                    pending = false
+                }
+            }
+        }
+        Log.d(TAG, "master has ${variants.size} real variant(s)")
+        if (variants.size != 1) return masterUrl
+        val variant = variants.first()
+        if (variant.startsWith("http")) return variant
+        return runCatching { java.net.URI(masterUrl).resolve(variant).toString() }
+            .getOrDefault(masterUrl)
     }
 }
 

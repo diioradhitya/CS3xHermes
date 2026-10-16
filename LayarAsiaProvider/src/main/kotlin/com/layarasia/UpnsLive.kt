@@ -15,7 +15,7 @@ import javax.crypto.spec.SecretKeySpec
  *
  * The whole scheme turned out to be one AES-CBC round trip:
  *   GET /api/v1/video?id=<id>&w=<w>&h=<h>&r=<referrer host>
- * returns hex ciphertext that decrypts to JSON with the m3u8 in "source".
+ * returns hex ciphertext that decrypts to JSON carrying three stream URLs.
  *
  * The key and IV look obfuscated in the bundle (a string table plus
  * fromCodePoint arithmetic over window.location), but every page I traced
@@ -37,6 +37,8 @@ class UpnsLive : ExtractorApi() {
         private const val TAG = "UpnsLive"
         private const val KEY = "kiemtienmua911ca"
         private const val IV = "1234567890oiuytr"
+        private const val UA =
+            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
     }
 
     private fun decrypt(hex: String): String? = try {
@@ -83,7 +85,7 @@ class UpnsLive : ExtractorApi() {
         Log.d(TAG, "=== START id=$id refererHost=$site ===")
 
         val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
+            "User-Agent" to UA,
             "Referer" to (referer ?: mainUrl)
         )
         val api = "$mainUrl/api/v1/video?id=$id&w=1080&h=2340&r=$site"
@@ -100,8 +102,18 @@ class UpnsLive : ExtractorApi() {
             return
         }
         val info = tryParseJson<VideoInfo>(json)
-        val stream = info?.source ?: run {
-            Log.e(TAG, "no source in payload: ${json.take(160)}")
+
+        // The payload offers three URLs and they are not interchangeable:
+        //   source   a bare IP over plain HTTP, the in-house P2P origin
+        //   cf       the zenlith Cloudflare worker
+        //   cfNative the site's own proxy for that worker
+        // All three 403 unless the request carries this host as its referrer --
+        // sending the episode page instead yields 403 and ExoPlayer surfaces it
+        // as ERROR_CODE_REMOTE_ERROR (2004). cfNative is also plain HTTPS with
+        // the k/kx token baked into its variant URLs, so it needs no headers at
+        // all and survives being resolved by the player.
+        val stream = info?.cfNative ?: info?.cf ?: info?.source ?: run {
+            Log.e(TAG, "no stream url in payload: ${json.take(160)}")
             return
         }
         Log.d(TAG, "stream: ${stream.take(90)}...")
@@ -112,10 +124,10 @@ class UpnsLive : ExtractorApi() {
                 name,
                 stream
             ) {
-                this.referer = referer ?: mainUrl
+                this.referer = mainUrl
                 this.headers = mapOf(
-                    "Referer" to (referer ?: mainUrl),
-                    "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
+                    "Referer" to mainUrl,
+                    "User-Agent" to UA
                 )
             }
         )
@@ -124,5 +136,6 @@ class UpnsLive : ExtractorApi() {
 
 data class VideoInfo(
     @JsonProperty("source") val source: String? = null,
-    @JsonProperty("cf") val cf: String? = null
+    @JsonProperty("cf") val cf: String? = null,
+    @JsonProperty("cfNative") val cfNative: String? = null
 )

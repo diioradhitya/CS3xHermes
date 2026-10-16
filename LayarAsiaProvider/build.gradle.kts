@@ -19,7 +19,7 @@
 // bysetayico.com embeds, which carry a PoW challenge and an AES-GCM payload;
 // the old UPNShare/HydraX/StreamP2P/etc registrations never matched anything
 // this site serves.
-version = 11
+version = 12
 
 cloudstream {
     description = "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download"
