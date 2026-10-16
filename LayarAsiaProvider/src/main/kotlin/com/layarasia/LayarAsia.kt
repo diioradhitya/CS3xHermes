@@ -44,6 +44,19 @@ class LayarAsia : MainAPI() {
     companion object {
         private val EPISODE_IN_TEXT = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
 
+        // Captures the site's episode numbering out of a link label, including
+        // the range form: "Episode 1-12" -> "1-12", "Episode 13-24 End" ->
+        // "13-24 End". "Episode Baru" has no number and correctly misses.
+        private val EPISODE_RANGE_IN_LABEL =
+            Regex("Episode\\s*(\\d+\\s*(?:-\\s*\\d+)?(?:\\s*End)?)", RegexOption.IGNORE_CASE)
+
+        // The upns family rotates hosts per title (layarasia.upns.live,
+        // sf21.upns.online, layarasia.upns.xyz, nuna.upns.pro, ...) but always
+        // serves the same /api/v1/video scheme.
+        private val UPNS_HOST =
+            Regex("^https?://([a-z0-9\\-]*\\.)?upns\\.(live|online|xyz|pro|site|top|vip)$",
+                RegexOption.IGNORE_CASE)
+
         fun getType(t: String): TvType = when (t.lowercase().trim()) {
             "movie", "film" -> TvType.Movie
             "tv series", "tv show", "drama", "kdrama", "cdrama", "thai drama",
@@ -218,33 +231,40 @@ class LayarAsia : MainAPI() {
         } else url
 
         val episodes = if (tvType == TvType.TvSeries) {
-            // Both the "latest" strip (div.lastend) and the full table
-            // (div.eplister) link the same episode pages, so dedupe on href
-            // before mapping to keep each episode once.
-            val pairs = document
-                .select("div.eplister ul li a[href], div.lastend div.inepcx a[href]")
+            // The "latest" strip (div.lastend) and the full table (div.eplister)
+            // link the very same episode pages, and div.lastend comes first in
+            // the document -- its rows carry no .epl-num, so deduping on
+            // document order kept the poorer row and threw away the label.
+            // Select eplister first so distinctBy keeps the labelled version.
+            val pairs = (document.select("div.eplister ul li a[href]") +
+                    document.select("div.lastend div.inepcx a[href]"))
                 .mapNotNull { eps ->
                     val raw = eps.attr("href")
                     if (raw.isBlank() || raw == "#") return@mapNotNull null
                     val href = fixUrl(raw)
                     val label = eps.text()
-                    val num = eps.selectFirst(".epl-num")?.text()?.trim().orEmpty()
-                    // "11-24" and "24 End" both start with the first number;
-                    // "HD" has no digits at all and only appears on movies.
-                    val episode = Regex("\\d+").find(num)?.groupValues?.getOrNull(0)?.toIntOrNull()
+                    // The site packs several episodes per post, so the label is
+                    // a range: "1-12", "13-24 End", or a bare "7" for series
+                    // that post one episode at a time.
+                    val range = eps.selectFirst(".epl-num")?.text()?.trim()?.takeIf { it.isNotBlank() }
+                        ?: EPISODE_RANGE_IN_LABEL.find(label)?.groupValues?.getOrNull(1)?.trim()
+                        ?: return@mapNotNull null
+                    val episode = Regex("\\d+").find(range)?.groupValues?.getOrNull(0)?.toIntOrNull()
                         ?: EPISODE_IN_TEXT.find(label)?.groupValues?.getOrNull(1)?.toIntOrNull()
                         ?: return@mapNotNull null
                     val season = Regex("Season\\s*(\\d+)", RegexOption.IGNORE_CASE)
                         .find(label)?.groupValues?.getOrNull(1)?.toIntOrNull()
                         ?: Regex("S(\\d+)(?:E\\d+)?$", RegexOption.IGNORE_CASE)
                             .find(href)?.groupValues?.getOrNull(1)?.toIntOrNull()
-                    Triple(href, episode, season)
+                    EpisodeRow(href, range, episode, season)
                 }
-                .distinctBy { it.first }
+                .distinctBy { it.href }
 
-            pairs.map { (href, episode, season) ->
+            pairs.map { (href, range, episode, season) ->
                 newEpisode(href) {
-                    this.name = "Episode $episode"
+                    // Keep the site's own numbering so a range reads as
+                    // "Episode 1-12" instead of collapsing to "Episode 1".
+                    this.name = "Episode $range"
                     this.episode = episode
                     this.season = season
                     this.posterUrl = poster
@@ -320,7 +340,19 @@ class LayarAsia : MainAPI() {
             val src = Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
                 .find(iframeHtml)?.groupValues?.getOrNull(1)?.trim()
             if (!src.isNullOrBlank() && found.add(src)) {
-                loadExtractor(fixUrl(src), data, subtitleCallback, callback)
+                val fixed = fixUrl(src)
+                // Cloudstream routes extractors by mainUrl, which is a literal
+                // prefix and then a Levenshtein similarity check
+                // (ExtractorApi.kt:950 and :967). The upns hosts rotate per
+                // title -- layarasia.upns.live on one, sf21.upns.online on the
+                // next -- so no single mainUrl can ever match them all and they
+                // ended up with no handler at all ("no links found"). Match the
+                // family by name and call the extractor directly instead.
+                if (isUpnsHost(fixed)) {
+                    UpnsLive().getUrl(fixed, data, subtitleCallback, callback)
+                } else {
+                    loadExtractor(fixed, data, subtitleCallback, callback)
+                }
             }
         }
 
@@ -348,6 +380,20 @@ class LayarAsia : MainAPI() {
 
         return true
     }
+
+    /** True for the rotating `*.upns.*` embed family handled by [UpnsLive]. */
+    private fun isUpnsHost(url: String): Boolean {
+        val host = runCatching { java.net.URI(url).host }.getOrNull() ?: return false
+        return UPNS_HOST.matches(url) || UPNS_HOST.matches("https://$host")
+    }
+
+    /** One row of the episode table: the page plus how the site labels it. */
+    private data class EpisodeRow(
+        val href: String,
+        val range: String,
+        val episode: Int,
+        val season: Int?
+    )
 
     private fun Element.getImageAttr(): String? = when {
         hasAttr("data-lazy-src") && attr("data-lazy-src").isNotBlank() -> attr("abs:data-lazy-src")

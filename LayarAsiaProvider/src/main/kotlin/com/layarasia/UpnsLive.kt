@@ -39,6 +39,7 @@ class UpnsLive : ExtractorApi() {
         private const val IV = "1234567890oiuytr"
         private const val UA =
             "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
+        private const val DEFAULT_REFERER_HOST = "server-1.layar.asia"
     }
 
     private fun decrypt(hex: String): String? = try {
@@ -70,6 +71,14 @@ class UpnsLive : ExtractorApi() {
         java.net.URI(url).host
     }.getOrNull()
 
+    /** Scheme + host of the embed URL, falling back to the default host. */
+    private fun originOf(url: String): String {
+        val uri = runCatching { java.net.URI(url) }.getOrNull()
+        val host = uri?.host ?: return mainUrl
+        val scheme = uri.scheme?.takeIf { it == "http" || it == "https" } ?: "https"
+        return "$scheme://$host"
+    }
+
     override suspend fun getUrl(
         url: String,
         referer: String?,
@@ -81,14 +90,20 @@ class UpnsLive : ExtractorApi() {
             Log.e(TAG, "no video id in $url")
             return
         }
-        val site = hostOf(referer ?: "") ?: mainUrl.removePrefix("https://")
-        Log.d(TAG, "=== START id=$id refererHost=$site ===")
+        // The host rotates per title (layarasia.upns.live, sf21.upns.online,
+        // layarasia.upns.xyz, ...) while the /api/v1/video scheme and the
+        // AES key/IV stay identical. Everything is served off whichever host
+        // the embed URL came from, including the cfNative proxy and the
+        // referrer the CDN demands, so take it from [url] rather than mainUrl.
+        val origin = originOf(url)
+        val site = hostOf(referer ?: "") ?: DEFAULT_REFERER_HOST
+        Log.d(TAG, "=== START origin=$origin id=$id refererHost=$site ===")
 
         val headers = mapOf(
             "User-Agent" to UA,
-            "Referer" to (referer ?: mainUrl)
+            "Referer" to (referer ?: origin)
         )
-        val api = "$mainUrl/api/v1/video?id=$id&w=1080&h=2340&r=$site"
+        val api = "$origin/api/v1/video?id=$id&w=1080&h=2340&r=$site"
         val hex = try {
             app.get(api, headers = headers, referer = referer).text
         } catch (e: Exception) {
@@ -124,9 +139,9 @@ class UpnsLive : ExtractorApi() {
                 name,
                 stream
             ) {
-                this.referer = mainUrl
+                this.referer = origin
                 this.headers = mapOf(
-                    "Referer" to mainUrl,
+                    "Referer" to origin,
                     "User-Agent" to UA
                 )
             }

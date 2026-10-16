@@ -170,10 +170,10 @@
         "name": "KlikXXi"
     },
     {
-        "fileHash": "sha256-fc07acde11f547353a53a402714daceb3d090b258f0ba83355840eabf2a9454c",
+        "fileHash": "sha256-4dc97f6bdb07a2bdbc420584010d8ab699ebcb6ddc68e62ba0fa3c85b23c33b9",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 52302,
+        "fileSize": 54112,
         "status": 2,
         "language": "id",
         "authors": [
@@ -183,7 +183,7 @@
             "Movie",
             "TvSeries"
         ],
-        "version": 12,
+        "version": 13,
         "internalName": "LayarAsiaProvider",
         "description": "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LayarAsiaProvider.cs3",
