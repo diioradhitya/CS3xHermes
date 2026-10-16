@@ -52,10 +52,13 @@ class LayarAsia : MainAPI() {
 
         // The upns family rotates hosts per title (layarasia.upns.live,
         // sf21.upns.online, layarasia.upns.xyz, nuna.upns.pro, ...) but always
-        // serves the same /api/v1/video scheme.
-        private val UPNS_HOST =
-            Regex("^https?://([a-z0-9\\-]*\\.)?upns\\.(live|online|xyz|pro|site|top|vip)$",
-                RegexOption.IGNORE_CASE)
+        // serves the same /api/v1/video scheme behind the same AES key. The
+        // site also hands out the identical software under the strp2p and
+        // p2pstream domains, so those belong to the same handler.
+        private val UPNS_HOST = Regex(
+            "^https?://([a-z0-9\\-]*\\.)?(upns\\.(live|online|xyz|pro|site|top|vip)|strp2p\\.site|p2pstream\\.vip)$",
+            RegexOption.IGNORE_CASE
+        )
 
         fun getType(t: String): TvType = when (t.lowercase().trim()) {
             "movie", "film" -> TvType.Movie
