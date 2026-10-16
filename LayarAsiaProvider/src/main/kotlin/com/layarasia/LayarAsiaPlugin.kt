@@ -10,9 +10,8 @@ class LayarAsiaPlugin : Plugin() {
         registerMainAPI(LayarAsia())
 
         // Scanned the seven home sections: the site only ever hands out two
-        // embed families, both Byse-backed.
-        //   bysesukior.com / bysetayico.com  -> handled here
-        //   layarasia.upns.live              -> no extractor yet
+        // embed families, server 1 and server 2.
         registerExtractorAPI(ByseExtractor())
+        registerExtractorAPI(UpnsLive())
     }
 }
