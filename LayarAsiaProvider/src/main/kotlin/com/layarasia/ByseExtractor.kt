@@ -29,8 +29,10 @@ import javax.crypto.spec.SecretKeySpec
  * referer prefix, the class name and the code pattern differ.
  */
 
-class ByseExtractor : ExtractorApi() {
-    override val name = "Byse"
+class ByseExtractor(private val label: String = "Byse") : ExtractorApi() {
+    // "Byse" is the embed host's own name; the site lists this mirror as
+    // "Server 1", so let the caller pass that label through.
+    override val name = label
     override val mainUrl = "https://bysesukior.com"
     override val requiresReferer = true
 

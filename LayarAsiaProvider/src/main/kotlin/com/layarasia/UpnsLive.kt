@@ -28,8 +28,12 @@ import javax.crypto.spec.SecretKeySpec
  * so the trailing partial block is dropped before decrypting (the site does the
  * same by only emitting whole blocks).
  */
-class UpnsLive : ExtractorApi() {
-    override val name = "UpnsLive"
+class UpnsLive(private val label: String = "UpnsLive") : ExtractorApi() {
+    // The site runs several upns-family hosts side by side and lists them
+    // under its own names ("UPNShare", "StreamP2P"), so the caller passes the
+    // mirror label through -- otherwise every one of them shows up as
+    // "UpnsLive" and the list reads as duplicate sources.
+    override val name = label
     override val mainUrl = "https://layarasia.upns.live"
     override val requiresReferer = true
 

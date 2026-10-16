@@ -60,6 +60,12 @@ class LayarAsia : MainAPI() {
             RegexOption.IGNORE_CASE
         )
 
+        // Byse answers on two domains; the site lists it as "Server 1".
+        private val BYSE_HOST = Regex(
+            "^https?://([a-z0-9\\-]*\\.)?(bysesukior|bysetayico)\\.(com|net|org|site|id)$",
+            RegexOption.IGNORE_CASE
+        )
+
         fun getType(t: String): TvType = when (t.lowercase().trim()) {
             "movie", "film" -> TvType.Movie
             "tv series", "tv show", "drama", "kdrama", "cdrama", "thai drama",
@@ -321,56 +327,61 @@ class LayarAsia : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
-        val iframeSrcs = document
-            .select("div.player-embed iframe, div#pembed iframe, div.video-content iframe")
-            .mapNotNull { it.getIframeAttr() }
-        val mirrorSrcs = document
+        val iframeSrcRegex =
+            Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
+
+        // Each extra server is a <select class="mirror"> option whose value is
+        // base64 of the iframe HTML and whose text is the name the site itself
+        // shows: UPNShare, HydraX, StreamP2P, Server 1, Server 2. Keep that
+        // text -- it is the only thing distinguishing two mirrors handled by
+        // the same extractor, which otherwise listed as identical names.
+        val mirrors = document
             .select("select.mirror option[value], select[name=mirror] option[value]")
             .mapNotNull { opt ->
                 val encoded = opt.attr("value")
                 if (encoded.length < 20) return@mapNotNull null
-                runCatching { String(Base64.getDecoder().decode(encoded), Charsets.UTF_8) }.getOrNull()
-            }
-            .filter { it.contains("iframe", ignoreCase = true) }
-            .mapNotNull { Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE).find(it)?.groupValues?.getOrNull(1) }
-
-        Log.i("LayarAsia", "loadLinks data=$data iframes=$iframeSrcs mirrors=$mirrorSrcs")
-
-        val found = mutableSetOf<String>()
-
-        // Suspend local function is not allowed, so take a suspend lambda.
-        val emit: suspend (String) -> Unit = { iframeHtml ->
-            val src = Regex("<iframe[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
-                .find(iframeHtml)?.groupValues?.getOrNull(1)?.trim()
-            if (!src.isNullOrBlank() && found.add(src)) {
-                val fixed = fixUrl(src)
-                // Cloudstream routes extractors by mainUrl, which is a literal
-                // prefix and then a Levenshtein similarity check
-                // (ExtractorApi.kt:950 and :967). The upns hosts rotate per
-                // title -- layarasia.upns.live on one, sf21.upns.online on the
-                // next -- so no single mainUrl can ever match them all and they
-                // ended up with no handler at all ("no links found"). Match the
-                // family by name and call the extractor directly instead.
-                if (isUpnsHost(fixed)) {
-                    UpnsLive().getUrl(fixed, data, subtitleCallback, callback)
-                } else {
-                    loadExtractor(fixed, data, subtitleCallback, callback)
-                }
-            }
-        }
-
-        document.select("div.player-embed iframe, div#pembed iframe, div.video-content iframe")
-            .forEach { it.getIframeAttr()?.let { src -> emit(src) } }
-
-        document.select("select.mirror option[value], select[name=mirror] option[value]")
-            .forEach { opt ->
-                val encoded = opt.attr("value")
-                if (encoded.length < 20) return@forEach
                 val decoded = runCatching {
                     String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
-                }.getOrNull() ?: return@forEach
-                if (decoded.contains("iframe", ignoreCase = true)) emit(decoded)
+                }.getOrNull() ?: return@mapNotNull null
+                if (!decoded.contains("iframe", ignoreCase = true)) return@mapNotNull null
+                val src = iframeSrcRegex.find(decoded)?.groupValues?.getOrNull(1)?.trim()
+                    ?: return@mapNotNull null
+                src to opt.text().trim().ifBlank { null }
             }
+
+        // The bare iframe repeats whichever mirror the page defaults to, and it
+        // carries no label of its own. Register mirrors first so the labelled
+        // copy wins this dedupe, otherwise every title lost its server name.
+        val direct = document
+            .select("div.player-embed iframe, div#pembed iframe, div.video-content iframe")
+            .mapNotNull { it.getIframeAttr() }
+            .map { it to null }
+
+        val entries = LinkedHashMap<String, String?>()
+        (mirrors + direct).forEach { (src, label) ->
+            if (!entries.containsKey(src)) entries[src] = label
+        }
+
+        Log.i("LayarAsia", "loadLinks data=$data sources=${entries.map { it.key to it.value }}")
+
+        entries.forEach { (src, label) ->
+            val fixed = fixUrl(src)
+            // Cloudstream routes extractors by mainUrl, which is a literal
+            // prefix and then a Levenshtein similarity check
+            // (ExtractorApi.kt:950 and :967). The upns hosts rotate per title,
+            // so no single mainUrl can match them all and they ended up with no
+            // handler at all ("no links found"). Match the family by name and
+            // call the extractor directly instead.
+            if (isUpnsHost(fixed)) {
+                UpnsLive(label ?: "UpnsLive").getUrl(fixed, data, subtitleCallback, callback)
+            } else if (isByseHost(fixed)) {
+                ByseExtractor(label ?: "Byse").getUrl(fixed, data, subtitleCallback, callback)
+            } else {
+                // No handler for HydraX yet; passing it through loadExtractor
+                // at least lets a matching extractor elsewhere claim it.
+                loadExtractor(fixed, data, subtitleCallback, callback)
+            }
+        }
 
         val downloadSrcs = document
             .select("a[href*='terabox'], a[href*='filemoon'], a[href*='fileditch'], a[href*='mirror'], a[href$='.mp4'], a[href*='.m3u8']")
@@ -379,7 +390,7 @@ class LayarAsia : MainAPI() {
 
         downloadSrcs.forEach { loadExtractor(fixUrl(it), data, subtitleCallback, callback) }
 
-        Log.i("LayarAsia", "loadLinks emitted=${found.size} downloads=$downloadSrcs")
+        Log.i("LayarAsia", "loadLinks emitted=${entries.size} downloads=$downloadSrcs")
 
         return true
     }
@@ -388,6 +399,12 @@ class LayarAsia : MainAPI() {
     private fun isUpnsHost(url: String): Boolean {
         val host = runCatching { java.net.URI(url).host }.getOrNull() ?: return false
         return UPNS_HOST.matches(url) || UPNS_HOST.matches("https://$host")
+    }
+
+    /** True for the Byse embed host, which also rotates between two domains. */
+    private fun isByseHost(url: String): Boolean {
+        val host = runCatching { java.net.URI(url).host }.getOrNull() ?: return false
+        return BYSE_HOST.matches(url) || BYSE_HOST.matches("https://$host")
     }
 
     /** One row of the episode table: the page plus how the site labels it. */
