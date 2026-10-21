@@ -211,10 +211,10 @@
         "name": "LayarWarna"
     },
     {
-        "fileHash": "sha256-1114a64b13d20def5e8f2c329bcf379912262d99eb90502d43535d60efa12b11",
+        "fileHash": "sha256-f0eb8a561700f3f81106dfce371242f11dcc199dace5c1bdc1df52497351d4ff",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 34504,
+        "fileSize": 35458,
         "status": 1,
         "language": "id",
         "authors": [
@@ -225,7 +225,7 @@
             "TvSeries",
             "Anime"
         ],
-        "version": 1,
+        "version": 2,
         "internalName": "LoklokProvider",
         "description": "Loklok - Drama, Film & Anime Sub Indo (loklok.my.id)",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LoklokProvider.cs3",

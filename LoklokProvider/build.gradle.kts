@@ -38,7 +38,18 @@
 // CATATAN IQIYI: response play dibungkus dua lapis -- data.data berisi string
 // JSON, jadi harus di-parse dua kali. URL streaming=hls_url (proxy
 // indocast-stream), field m3u8 berisi playlist inline.
-version = 1
+//
+// v2 (perubahan dari user's test di perangkat):
+// 1. Resolusi tidak lagi ditulis di nama link (nama jadi kembar semua), tapi
+//    di field ExtractorLink.quality -> jadi track video di player.
+// 2. Beranda akhirnya berpaginasi: tiap halaman scroll mengambil halaman
+//    berikutnya dari tiap platform (sebelumnya cuma 5 baris lalu berhenti).
+//    Semua tab juga dicap MAX_PAGES karena pager.hasMore filmbox selalu true.
+// 3. Semua poster dinormalisasi jadi potrait 300x420 lewat resize proxy
+//    convert.d-cdn.me. Sebelumnya campur: filmbox 0.56-0.80 (300x450 s/d
+//    3900x5700), drakorid 180x200 (nyaris persegi), iqiyi bahkan bisa
+//    landscape (480x270), animekompi 424x600. Fallback landscape iqiyi dihapus.
+version = 2
 
 cloudstream {
     description = "Loklok - Drama, Film & Anime Sub Indo (loklok.my.id)"

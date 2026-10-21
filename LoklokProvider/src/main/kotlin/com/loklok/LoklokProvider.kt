@@ -40,8 +40,20 @@ class LoklokProvider : MainAPI() {
         const val ANIME_PAGE = 15
         const val FILMBOX_PAGE = 20
 
+        /** Batas jumlah halaman yang di-scroll per tab. */
+        const val MAX_PAGES = 20
+
         /** Prefix URL internal; isi = platform|id[|param...]. */
         const val ITEM_PATH = "/d/"
+
+        /**
+         * convert.d-cdn.me itu image-resize proxy: `<base64(urlAsli)>/<W>x<H>/1.jpg`.
+         * Semua platform bisa dilewatkan ke sini supaya poster seragam.
+         */
+        const val CONVERT = "https://convert.d-cdn.me/convert"
+
+        /** Rasio 300x420 = 0.71 (potrait 2:3). */
+        const val POSTER_SIZE = "300x420"
     }
 
     private val http by lazy {
@@ -151,6 +163,38 @@ class LoklokProvider : MainAPI() {
     private fun abs(u: String): String =
         if (u.startsWith("http")) u else "https://loklok.my.id" + u
 
+    /**
+     * Samakan semua poster jadi potrait 300x420 lewat resize proxy.
+     *
+     * Sumbernya campur: filmbox 0.56-0.80 dengan resolusi 300x450 sampai
+     * 3900x5700, drakorid 180x200 (nyaris persegi), iqiyi punya varian
+     * potrait & landscape, animekompi 424x600. Di grid aplikasi poster
+     * bercampur campur kelihatan rusak, jadi semua dilewatkan ke
+     * convert.d-cdn.me dengan ukuran yang sama.
+     */
+    private fun portrait(raw: String?): String? {
+        val u = raw?.trim().orEmpty()
+        if (u.isEmpty() || !u.startsWith("http")) return null
+        // Sudah lewat convert.d-cdn.me (mis. drakorid) -> ganti ukuran saja.
+        if (u.startsWith(CONVERT)) {
+            return u.replace(Regex("/\\d+x\\d+/1\\.jpg$"), "/$POSTER_SIZE/1.jpg")
+        }
+        val b64 = java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString(u.toByteArray())
+        return "$CONVERT/$b64/$POSTER_SIZE/1.jpg"
+    }
+
+    /** Resolusi -> bitmask track video (dipakai ExtractorLink.quality). */
+    private fun qualityOf(q: Int): Int = when {
+        q >= 2160 -> Qualities.P2160.value
+        q >= 1080 -> Qualities.P1080.value
+        q >= 720 -> Qualities.P720.value
+        q >= 480 -> Qualities.P480.value
+        q >= 360 -> Qualities.P360.value
+        q >= 240 -> Qualities.P240.value
+        else -> Qualities.Unknown.value
+    }
+
     // ------------------------------------------------------------------ main page
 
     /**
@@ -178,34 +222,45 @@ class LoklokProvider : MainAPI() {
         val kind = parts.getOrElse(0) { "" }
         val p = parts.getOrNull(parts.size - 1)?.toIntOrNull() ?: page
 
-        if (kind == "beranda") return homeSections()
+        if (kind == "beranda") return homeSections(page)
 
         return when (kind) {
             "drakorid" -> {
                 val d = get("/drakorid/home?page=$p&type=terbaru")
                 val items = d?.optJSONArray("items")?.mapDrakorid().orEmpty()
-                newHomePageResponse(request.name, items, items.size >= DRAKORID_PAGE)
+                newHomePageResponse(
+                    request.name, items,
+                    items.size >= DRAKORID_PAGE && p < MAX_PAGES
+                )
             }
 
             "genre" -> {
                 val slug = parts.getOrElse(1) { "" }
                 val d = get("/drakorid/kategori/detail?slug=${enc(slug)}&page=$p")
                 val items = d?.optJSONArray("items")?.mapDrakorid().orEmpty()
-                newHomePageResponse(request.name, items, items.size >= DRAKORID_PAGE)
+                newHomePageResponse(
+                    request.name, items,
+                    items.size >= DRAKORID_PAGE && p < MAX_PAGES
+                )
             }
 
             "filmbox" -> {
                 val st = parts.getOrElse(1) { "1" }
                 val d = get("/filmbox/trending?page=$p&perPage=$FILMBOX_PAGE&subjectType=$st")
                 val items = d?.optJSONArray("items")?.mapFilmbox().orEmpty()
+                // pager.hasMore dari filmbox selalu true (totalCount 1.000.000),
+                // jadi harus kita cap sendiri.
                 val more = d?.optJSONObject("pager")?.optBoolean("hasMore", false) ?: false
-                newHomePageResponse(request.name, items, more)
+                newHomePageResponse(request.name, items, more && p < MAX_PAGES)
             }
 
             "animekompi" -> {
                 val d = get("/animekompi/home?page=$p")
                 val items = d?.optJSONArray("latest_updates")?.mapAnime().orEmpty()
-                newHomePageResponse(request.name, items, items.size >= ANIME_PAGE)
+                newHomePageResponse(
+                    request.name, items,
+                    items.size >= ANIME_PAGE && p < MAX_PAGES
+                )
             }
 
             "iqiyi" -> {
@@ -218,30 +273,42 @@ class LoklokProvider : MainAPI() {
         }
     }
 
-    /** Beranda: beberapa section, masing-masing satu platform. */
-    private suspend fun homeSections(): HomePageResponse {
+    /**
+     * Beranda: beberapa section, masing-masing satu platform.
+     *
+     * Tiap halaman scroll mengambil halaman BERIKUTNYA dari tiap platform, jadi
+     * scroll tidak mentok di 5 baris pertama. iQIYI tidak punya paginasi
+     * (halaman 1 = halaman 2), jadi barisnya cuma di halaman 1.
+     */
+    private suspend fun homeSections(page: Int): HomePageResponse {
         val sections = mutableListOf<HomePageList>()
 
-        val drakor = get("/drakorid/home?page=1&type=terbaru")
+        val drakor = get("/drakorid/home?page=$page&type=terbaru")
             ?.optJSONArray("items")?.mapDrakorid().orEmpty()
         if (drakor.isNotEmpty()) sections.add(HomePageList("Drakor Terbaru", drakor, true))
 
-        val film = get("/filmbox/trending?page=1&perPage=$FILMBOX_PAGE&subjectType=1")
+        val film = get("/filmbox/trending?page=$page&perPage=$FILMBOX_PAGE&subjectType=1")
             ?.optJSONArray("items")?.mapFilmbox().orEmpty()
         if (film.isNotEmpty()) sections.add(HomePageList("Film Trending", film, true))
 
-        val series = get("/filmbox/trending?page=1&perPage=$FILMBOX_PAGE&subjectType=2")
+        val series = get("/filmbox/trending?page=$page&perPage=$FILMBOX_PAGE&subjectType=2")
             ?.optJSONArray("items")?.mapFilmbox().orEmpty()
         if (series.isNotEmpty()) sections.add(HomePageList("Series Trending", series, true))
 
-        val anime = get("/animekompi/home?page=1")
+        val anime = get("/animekompi/home?page=$page")
             ?.optJSONArray("latest_updates")?.mapAnime().orEmpty()
         if (anime.isNotEmpty()) sections.add(HomePageList("Anime Terbaru", anime, true))
 
-        val iq = get("/iqiyi/trending")?.iqiyiItems().orEmpty()
-        if (iq.isNotEmpty()) sections.add(HomePageList("iQIYI Populer", iq, true))
+        if (page == 1) {
+            val iq = get("/iqiyi/trending")?.iqiyiItems().orEmpty()
+            if (iq.isNotEmpty()) sections.add(HomePageList("iQIYI Populer", iq, true))
+        }
 
-        return newHomePageResponse(sections, false)
+        val full = drakor.size >= DRAKORID_PAGE ||
+            film.size >= FILMBOX_PAGE ||
+            series.size >= FILMBOX_PAGE ||
+            anime.size >= ANIME_PAGE
+        return newHomePageResponse(sections, full && page < MAX_PAGES)
     }
 
     // ------------------------------------------------------------------ mapping
@@ -255,7 +322,7 @@ class LoklokProvider : MainAPI() {
             val title = o.optString("title").ifBlank { continue }
             out.add(
                 newMovieSearchResponse(title, itemUrl("drakorid", id), TvType.TvSeries) {
-                    posterUrl = o.optString("imageUrl").ifBlank { null }
+                    posterUrl = portrait(o.optString("imageUrl"))
                 }
             )
         }
@@ -274,7 +341,7 @@ class LoklokProvider : MainAPI() {
             val type = if (st == 1) TvType.Movie else TvType.TvSeries
             out.add(
                 newMovieSearchResponse(title, itemUrl("filmbox", dp, "sid=$sid", "st=$st"), type) {
-                    posterUrl = o.optString("cover_url").ifBlank { null }
+                    posterUrl = portrait(o.optString("cover_url"))
                     this.score = Score.from10(o.optDouble("rating", 0.0).takeIf { it > 0 }?.toString())
                 }
             )
@@ -291,7 +358,7 @@ class LoklokProvider : MainAPI() {
             val title = o.optString("title").ifBlank { continue }
             out.add(
                 newMovieSearchResponse(title, itemUrl("animekompi", path), TvType.Anime) {
-                    posterUrl = o.optString("cover_url").ifBlank { null }
+                    posterUrl = portrait(o.optString("cover_url"))
                     this.score = Score.from10(o.optDouble("rating", 0.0).takeIf { it > 0 }?.toString())
                 }
             )
@@ -309,9 +376,11 @@ class LoklokProvider : MainAPI() {
                 val o = items.optJSONObject(i) ?: continue
                 val pd = o.optString("pathdetail").ifBlank { continue }
                 val title = o.optString("title").ifBlank { continue }
+                // PENTING: hanya varian potrait. Versi landscape (480x270)
+                // bikin poster bercampur campur di grid aplikasi, jadi item
+                // tanpa potrait dilewati saja.
                 val cover = o.optJSONObject("cover")
-                val poster = cover?.optString("potrait")?.ifBlank { null }
-                    ?: cover?.optString("landscape")?.ifBlank { null }
+                val poster = portrait(cover?.optString("potrait")) ?: continue
                 val type = if (o.optString("contentType") == "movie") TvType.Movie else TvType.TvSeries
                 out.add(
                     newMovieSearchResponse(title, itemUrl("iqiyi", pd), type) {
@@ -371,7 +440,7 @@ class LoklokProvider : MainAPI() {
         val d = getRetry("/drakorid/detail?slug=${enc(slug)}")
             ?: return newMovieLoadResponse("Error", itemUrl("drakorid", slug), TvType.TvSeries, itemUrl("drakorid", slug))
         val title = d.optString("title").ifBlank { slug }
-        val poster = d.optString("poster").ifBlank { null }
+        val poster = portrait(d.optString("poster"))
         val eps = d.optJSONArray("episodes")
         val episodes = mutableListOf<Episode>()
         if (eps != null) {
@@ -433,7 +502,7 @@ class LoklokProvider : MainAPI() {
         val year = yearOf(d.optString("releaseDate"))
         val genre = d.optString("genre")
         val plot = d.optString("description").ifBlank { null }
-        val poster = d.optString("cover_url").ifBlank { null }
+        val poster = portrait(d.optString("cover_url"))
         val rating = d.optDouble("rating", 0.0).takeIf { it > 0 }?.toString()
 
         // Film (subjectType=1) diputar dengan penomoran 0-based: seasons_list
@@ -485,7 +554,7 @@ class LoklokProvider : MainAPI() {
         }
         val genres = d.optJSONArray("genres")
         return newTvSeriesLoadResponse(title, itemUrl("animekompi", path), TvType.Anime, episodes) {
-            posterUrl = d.optString("cover_url").ifBlank { null }
+            posterUrl = portrait(d.optString("cover_url"))
             plot = d.optString("synopsis").ifBlank { null }
             if (genres != null && genres.length() > 0) {
                 this.tags = (0 until genres.length()).map { genres.optString(it) }.filter { it.isNotEmpty() }
@@ -499,7 +568,7 @@ class LoklokProvider : MainAPI() {
             ?: return newMovieLoadResponse("Error", itemUrl("iqiyi", pathDetail), TvType.TvSeries, itemUrl("iqiyi", pathDetail))
         val title = d.optString("title").ifBlank { pathDetail }
         val cover = d.optJSONObject("cover")
-        val poster = cover?.optString("potrait")?.ifBlank { null } ?: cover?.optString("landscape")?.ifBlank { null }
+        val poster = portrait(cover?.optString("potrait"))
 
         val episodes = mutableListOf<Episode>()
         val seasons = d.optJSONArray("seasons")
@@ -566,6 +635,7 @@ class LoklokProvider : MainAPI() {
             newExtractorLink(name, "Loklok", url) {
                 this.referer = referer
                 this.type = ExtractorLinkType.M3U8
+                this.quality = qualityOf(d.optInt("quality", 0))
             }
         )
         return true
@@ -618,6 +688,10 @@ class LoklokProvider : MainAPI() {
         // CDN asli membalas 429 untuk klien luar -> WAJIB pakai *_proxy.
         // Filmbox bisa mengembalikan url_proxy yang sama untuk beberapa
         // resolusi, jadi dedupe per URL supaya tidak ada server kembar.
+        //
+        // Resolusi TIDAK ditulis di nama link (nama jadi kembar semua). Resolusi
+        // diserahkan ke field quality -> jadi track video di player, jadi
+        // pengguna pindah kualitas lewat track, bukan lewat daftar source.
         var emitted = 0
         val seen = mutableSetOf<String>()
         val main = d.optString("vid_url_proxy").ifBlank { d.optString("vid_url") }
@@ -626,6 +700,7 @@ class LoklokProvider : MainAPI() {
                 newExtractorLink(name, "Loklok", main) {
                     this.referer = referer
                     this.type = ExtractorLinkType.VIDEO
+                    this.quality = qualityOf(d.optInt("quality", 0))
                 }
             )
             emitted++
@@ -638,13 +713,10 @@ class LoklokProvider : MainAPI() {
                 if (u.isBlank() || !seen.add(u)) continue
                 val res = h.optString("resolutions")
                 callback(
-                    newExtractorLink(
-                        if (res.isNotBlank()) "Loklok $res" else "Loklok",
-                        "Loklok",
-                        u
-                    ) {
+                    newExtractorLink(name, "Loklok", u) {
                         this.referer = referer
                         this.type = ExtractorLinkType.VIDEO
+                        this.quality = qualityOf(res.toIntOrNull() ?: 0)
                     }
                 )
                 emitted++
@@ -713,6 +785,7 @@ class LoklokProvider : MainAPI() {
             newExtractorLink(name, "Loklok", hlsUrl) {
                 this.referer = referer
                 this.type = ExtractorLinkType.M3U8
+                this.quality = qualityOf(d.optInt("quality", 0))
             }
         )
         return true

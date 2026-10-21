@@ -7,6 +7,47 @@ Format satu entri per batch kerja, terbaru di atas.
 
 ---
 
+## 2026-10-21 (siang) — Loklok v2: perbaikan dari test di perangkat
+
+### Yang dikoreksi
+
+1. **Nama source video duplikat.** Filmbox emitting link "Loklok 360" /
+   "Loklok 480" / "Loklok 1080" — nama bedanya cuma resolusi, jadi daftar
+   source di app jadi kacau. Resolusi sekarang ditulis di field
+   `ExtractorLink.quality` (angka resolusi, mis. 720/480/360) supaya jadi
+   **track video** di player, bukan bagian dari nama. Semua link bernama sama
+   "Loklok". `Qualities.Unknown.value` = 400 (bukan 0) — itu default SDK,
+   jadi link yang tidak bisa ditentukan resolusinya tetap 400.
+2. **Pagination Beranda tidak jalan.** `homeSections()` selalu fetch halaman 1
+   dan `hasNext=false`, jadi scroll berhenti setelah 5 baris. Sekarang
+   `homeSections(page)` — tiap halaman scroll mengambil halaman BERIKUTNYA
+   dari tiap platform. iQIYI tidak punya paginasi (halaman 1 = halaman 2,
+   122 duplikat), jadi barisnya cuma di halaman 1.
+   Semua tab juga dicap `MAX_PAGES = 20` karena `pager.hasMore` filmbox selalu
+   `true` (totalCount 1.000.000) — tanpa cap, scroll tak berujung.
+3. **Poster bercampur potrait & landscape.** Terukur:
+   - filmbox 0.56–0.80, resolusi 300×450 s/d 3900×5700 (CDN tanpa resize)
+   - drakorid 180×200 (0.90, nyaris persegi) — `convert.d-cdn.me` bisa di-crop
+   - iqiyi `cover.potrait` 260×360 (0.72) **dan** `cover.landscape` 480×270 (1.78)
+   - animekompi 424×600 (0.71)
+   Solusi: semua poster dilewatkan resize proxy `convert.d-cdn.me/convert/
+   <base64url(url)>/300x420/1.jpg` → seragam potrait 300×420. Fallback
+   landscape iqiyi dihapus; item tanpa potrait dilewati.
+
+### Verifikasi
+
+- Harness live: **72 PASS / 0 FAIL** (`/root/loklok-verify/run11.log`).
+  - Beranda: p1=240, p2=85, duplikat antar halaman 0, hasNext=true.
+  - 325 poster, semua URL berakhir `/300x420/1.jpg`; 6 sample di-download dan
+    diukur Header JPEG → persis 300×420.
+  - Link: nama tanpa angka resolusi; quality filmbox `[720, 480]`, drakorid
+    `[720]`, iqiyi `[480]`, animekompi `[400, 400]` (2 server beda).
+- Artifact: `LoklokProvider.cs3` 35.458 B, `classes.dex` 80.956 B,
+  sha256 `f0eb8a561700f3f81106dfce371242f11dcc199dace5c1bdc1df52497351d4ff`.
+  Manifest: Loklok `version: 2`.
+
+---
+
 ## 2026-10-21 — Plugin baru: Loklok (loklok.my.id)
 
 ### Yang dikerjakan
