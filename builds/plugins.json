@@ -211,6 +211,27 @@
         "name": "LayarWarna"
     },
     {
+        "fileHash": "sha256-1114a64b13d20def5e8f2c329bcf379912262d99eb90502d43535d60efa12b11",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 34504,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Dio R"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Anime"
+        ],
+        "version": 1,
+        "internalName": "LoklokProvider",
+        "description": "Loklok - Drama, Film & Anime Sub Indo (loklok.my.id)",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LoklokProvider.cs3",
+        "name": "LoklokProvider"
+    },
+    {
         "fileHash": "sha256-7e12818b20afb86e79718d66abc39cae0edeecd834308a07f8b14b8f4c81bc98",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
@@ -398,26 +419,5 @@
         "description": "WGFilm21 - Streaming Movie Sub Indo",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/WGFilm21.cs3",
         "name": "WGFilm21"
-    },
-    {
-        "fileHash": "sha256-1114a64b13d20def5e8f2c329bcf379912262d99eb90502d43535d60efa12b11",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 34504,
-        "status": 1,
-        "language": "id",
-        "authors": [
-            "Dio R"
-        ],
-        "tvTypes": [
-            "Movie",
-            "TvSeries",
-            "Anime"
-        ],
-        "version": 1,
-        "internalName": "LoklokProvider",
-        "description": "Loklok - Drama, Film & Anime Sub Indo (loklok.my.id)",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LoklokProvider.cs3",
-        "name": "LoklokProvider"
     }
 ]

@@ -15,7 +15,22 @@
 # is read from the environment. Export JITPACK_USERNAME / JITPACK_PASSWORD first.
 set -euo pipefail
 
-TOOLS="$HOME/tools"
+# Toolchain lokasi. Di mesin ini tools ada di /home/diora/tools, tapi $HOME
+# bisa berbeda (root punya HOME=/root), jadi "$HOME/tools" kadang menunjuk
+# ke tempat yang tidak ada -> "JAVA_HOME is set to an invalid directory".
+# Pilih direktori yang benar-benar berisi jdk21.
+pick_tools() {
+    for d in "$HOME/tools" /home/diora/tools /root/tools /opt/tools; do
+        [ -x "$d/jdk21/bin/java" ] && { echo "$d"; return; }
+    done
+    echo "$HOME/tools"
+}
+
+TOOLS="$(pick_tools)"
+if [ ! -x "$TOOLS/jdk21/bin/java" ]; then
+    echo "ERROR: tidak menemukan jdk21 di \$HOME/tools, /home/diora/tools, /root/tools, /opt/tools" >&2
+    exit 1
+fi
 export JAVA_HOME="$TOOLS/jdk21"
 export ANDROID_HOME="$TOOLS/android-sdk"
 export ANDROID_SDK_ROOT="$TOOLS/android-sdk"
@@ -41,6 +56,13 @@ for f in */build/*.cs3; do
   cp "$f" "builds/$(basename "$f")"
 done
 cp build/plugins.json builds/plugins.json
+
+# makePluginsJson menulis URL artifact tanpa segmen branch:
+#   https://raw.githubusercontent.com/<repo>/builds/<P>.cs3
+# padahal artifact dipublikasikan di branch "main", jadi URL yang benar:
+#   https://raw.githubusercontent.com/<repo>/main/builds/<P>.cs3
+# Tanpa perbaikan ini, manifest yang dipublikasikan menunjuk file yang tidak ada.
+sed -i "s#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/builds/#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/builds/#g" builds/plugins.json
 ls -la builds/*.cs3 builds/plugins.json
 
 if [ "${1:-}" = "--publish" ]; then
