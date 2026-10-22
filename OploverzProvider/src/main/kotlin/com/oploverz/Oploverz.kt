@@ -164,6 +164,16 @@ class Oploverz : MainAPI() {
                     ?.trim()
                     ?.ifEmpty { null }
 
+    /** Section "Recommended Series" (div.bixbox > div.listupd) di halaman Madara. */
+    private fun Element.recommendedItems(): List<SearchResponse> {
+        val box =
+                select("div.bixbox").firstOrNull {
+                    it.selectFirst("h3 span")?.text()?.contains("Recommended", true) == true
+                } ?: return emptyList()
+        val list = box.selectFirst("div.listupd") ?: return emptyList()
+        return list.select("article.bs").mapNotNull { it.toSearchResult() }
+    }
+
     override suspend fun load(url: String): LoadResponse {
         val doc = fetchDoc(url, "eplister")
 
@@ -213,6 +223,7 @@ class Oploverz : MainAPI() {
         val cover = tracker?.cover
         val plot = doc.selectFirst("div.entry-content > p")?.text()?.trim()
         val genres = doc.select("div.genxed a").map { it.text() }
+        val recommendations = doc.recommendedItems()
         val status = getStatus(statusText)
 
         // Film (Movie) diserialisasi CloudStream sebagai MovieLoadResponse: tidak
@@ -226,6 +237,7 @@ class Oploverz : MainAPI() {
                 this.year = year
                 this.plot = plot
                 this.tags = genres
+                this.recommendations = recommendations
                 runCatching { addMalId(tracker?.malId) }
             }
         }
@@ -238,6 +250,7 @@ class Oploverz : MainAPI() {
             showStatus = status
             this.plot = plot
             this.tags = genres
+            this.recommendations = recommendations
             runCatching { addMalId(tracker?.malId) }
         }
     }

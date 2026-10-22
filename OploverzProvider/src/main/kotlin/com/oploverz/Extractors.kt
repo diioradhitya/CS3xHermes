@@ -187,6 +187,47 @@ class Shorticu : StreamWishExtractor() {
  * Ekstraktor StreamWish bawaan tidak bisa menangani format ini, jadi
  * ditImplementasikan manual; kalau gagal, jatuh ke logika StreamWish lama.
  */
+/** Kualitas dari tinggi (px) -> nilai Qualities SDK. */
+internal fun qualityByHeight(h: Int): Int =
+        when (h) {
+            144 -> Qualities.P144.value
+            240 -> Qualities.P240.value
+            360 -> Qualities.P360.value
+            480 -> Qualities.P480.value
+            720 -> Qualities.P720.value
+            1080 -> Qualities.P1080.value
+            1440 -> Qualities.P1440.value
+            2160 -> Qualities.P2160.value
+            else -> Qualities.Unknown.value
+        }
+
+/**
+ * Baca master playlist HLS, kembalikan daftar (url, kualitas) per variant.
+ * Semua variant diambil (tidak ada batas resolusi), jadi aplikasi bisa
+ * offer 360p/480p/720p/1080p sekaligus kalau memang tersedia.
+ */
+internal suspend fun parseM3u8Variants(masterUrl: String): List<Pair<String, Int>> {
+    val text =
+            try {
+                app.get(masterUrl).text
+            } catch (e: Throwable) {
+                return emptyList()
+            }
+    if (!text.contains("#EXTM3U")) return emptyList()
+    val out = mutableListOf<Pair<String, Int>>()
+    val lines = text.lines()
+    for (i in lines.indices) {
+        val l = lines[i]
+        if (!l.startsWith("#EXT-X-STREAM-INF")) continue
+        val res = Regex("RESOLUTION=(\\d+)x(\\d+)").find(l)
+        val height = res?.groupValues?.get(2)?.toIntOrNull() ?: 0
+        val url = lines.getOrNull(i + 1)?.trim() ?: continue
+        if (url.isEmpty() || url.startsWith("#")) continue
+        out.add(url to qualityByHeight(height))
+    }
+    return out
+}
+
 class UpBolt : StreamWishExtractor() {
     override var name = "UpBolt"
     override val mainUrl = "https://upbolt.to"
@@ -237,16 +278,35 @@ class UpBolt : StreamWishExtractor() {
                 val q =
                         Regex("""\[mp4 (\d{3,4})p\]""")
                                 .find(title ?: "")?.groupValues?.get(1)?.toIntOrNull()
-                callback(
-                        newExtractorLink(
-                                title?.ifBlank { null } ?: "UpBolt",
-                                "UpBolt",
-                                m3u8,
-                                ExtractorLinkType.M3U8
-                        ) {
-                            this.referer = "$mainUrl/"
-                            this.quality = q?.let { qualityOf(it) } ?: Qualities.Unknown.value
-                        })
+                // Master playlist bisa punya beberapa variant (mis. 360p + 480p).
+                // Semuanya dikembalikan sebagai link terpisah supaya aplikasi
+                // bisa offer track video resolusi tertinggi yang tersedia.
+                val variants = parseM3u8Variants(m3u8)
+                if (variants.isEmpty()) {
+                    callback(
+                            newExtractorLink(
+                                    title?.ifBlank { null } ?: "UpBolt",
+                                    "UpBolt",
+                                    m3u8,
+                                    ExtractorLinkType.M3U8
+                            ) {
+                                this.referer = "$mainUrl/"
+                                this.quality = q?.let { qualityOf(it) } ?: Qualities.Unknown.value
+                            })
+                } else {
+                    for ((vUrl, vQuality) in variants) {
+                        callback(
+                                newExtractorLink(
+                                        title?.ifBlank { null } ?: "UpBolt",
+                                        "UpBolt",
+                                        vUrl,
+                                        ExtractorLinkType.M3U8
+                                ) {
+                                    this.referer = "$mainUrl/"
+                                    this.quality = vQuality
+                                })
+                    }
+                }
                 resolved = true
             }
         } catch (e: Throwable) {
@@ -276,29 +336,42 @@ class Blogger : ExtractorApi() {
             callback: (ExtractorLink) -> Unit
     ) {
         val html = app.get(url).text
-        val raw =
+        // Halaman Blogger memuat satu URL GoogleVideo per itag (18=360p,
+        // 22=720p, 37=1080p, ...). Semua varian dikembalikan supaya aplikasi
+        // bisa memilih track video resolusi tertinggi yang tersedia.
+        val raws =
                 Regex("""https://[^"&]*googlevideo\.com/videoplayback[^"&]*""")
-                        .find(html)?.groupValues?.get(0) ?: return
-        val videoUrl =
-                raw.replace("\\u003d", "=")
-                        .replace("\\u0026", "&")
-                        .replace("\\u0026amp;", "&")
-                        .replace("\\/", "/")
-        if (videoUrl.isBlank()) return
-        val itag =
-                Regex("""itag(?:\\u003d|=)(\d+)""")
-                        .find(raw)?.groupValues?.get(1)?.toIntOrNull()
-        val quality =
-                when (itag) {
-                    37, 136, 137, 271 -> Qualities.P1080.value
-                    22, 136 -> Qualities.P720.value
-                    18 -> Qualities.P360.value
-                    else -> Qualities.Unknown.value
-                }
-        callback(
-                newExtractorLink("Blogger", "Blogger", videoUrl, ExtractorLinkType.VIDEO) {
-                    this.quality = quality
-                })
+                        .findAll(html)
+                        .map { it.groupValues.get(0) }
+                        .toList()
+        if (raws.isEmpty()) return
+        val byItag = LinkedHashMap<Int, String>()
+        for (raw in raws) {
+            val itag =
+                    Regex("""itag(?:\\u003d|=)(\d+)""")
+                            .find(raw)?.groupValues?.get(1)?.toIntOrNull() ?: continue
+            if (!byItag.containsKey(itag)) byItag[itag] = raw
+        }
+        if (byItag.isEmpty()) return
+        for ((itag, raw) in byItag) {
+            val videoUrl =
+                    raw.replace("\\u003d", "=")
+                            .replace("\\u0026", "&")
+                            .replace("\\u0026amp;", "&")
+                            .replace("\\/", "/")
+            if (videoUrl.isBlank()) continue
+            val quality =
+                    when (itag) {
+                        37, 136, 137, 271, 59, 78 -> Qualities.P1080.value
+                        22 -> Qualities.P720.value
+                        18 -> Qualities.P360.value
+                        else -> Qualities.Unknown.value
+                    }
+            callback(
+                    newExtractorLink("Blogger", "Blogger", videoUrl, ExtractorLinkType.VIDEO) {
+                        this.quality = quality
+                    })
+        }
     }
 }
 
