@@ -7,6 +7,102 @@ Format satu entri per batch kerja, terbaru di atas.
 
 ---
 
+## 2026-10-22 — Dua bug global plugin (install error + plugin tak terbaca di Beranda)
+
+### Gejala di TV box (B860H V2.1, Android 6.0.1 / API 23)
+
+Semua plugin gagal install (pesan error) dan tidak ada provider di Beranda.
+
+### Akar masalah #1 — format dex 038 tidak bisa dibaca Android 6
+
+Dari log CloudStream di box:
+
+```
+W art    : Failed to open dex file '.../OploverzProvider.617563532.cs3' from memory:
+           Unrecognized version number in ...cs3: 0 3 8
+E PluginManager: Failed to load ...: ClassNotFoundException:
+           Didn't find class "com.oploverz.OploverzPlugin"
+```
+
+Semua plugin dibangun dengan `minSdk = 26`, jadi D8 mengeluarkan format dex
+**038** yang hanya dipahami ART Android 8.0+ (API 26). ART Android 6 maximum
+dex 037 -> **semua** plugin gagal dimuat (bukan cuma Loklok; Oploverz,
+Filmlokal, Filmkita error identik).
+
+Fix:
+- `build.gradle.kts`: `minSdk 26 -> 21` (D8 memetakan minApi >= 26 ke dex 038,
+  minApi < 26 ke dex 035/037). Semua 20 modul kini dex **035**.
+- `LayarAsiaProvider` + `LoklokProvider`: `java.util.Base64` (API 26) ->
+  `android.util.Base64` (API 8+). Padding ditambahkan manual untuk
+  `Base64.decode` karena android butuh padding lengkap.
+- **Version semua 20 modul dinaikkan 1** (Dutamovie 1->2 ... Loklok 2->3,
+  IdnMovie 9->10, Oploverz 6->7, dst). Wajib: CloudStream menaruh file plugin
+  sebagai `<internalName>.<hashCode(internalName)>.cs3` -- angka itu BUKAN
+  hash isi file (sudah dihitung ulang: persis `String.hashCode(nama)`), jadi
+  file lama tidak otomatis tergantikan. CloudStream hanya mengunduh ulang
+  kalau `version` di manifest naik (`isOutdated = online.version > saved.version`).
+
+### Akar masalah #2 — cache jsDelivr 12 jam bikin hash mismatch
+
+CloudStream punya setting "jsDelivr CDN": kalau aktif, URL
+`raw.githubusercontent.com/...` diubah jadi `cdn.jsdelivr.net/gh/...@<ref>/...`.
+jsDelivr meng-cache file GitHub dengan `s-maxage=43200` (12 JAM) dan
+**mengabaikan query string** (query ?v=1 tetap served basi). Akibatnya:
+
+- manifest yang dibaca app masih versi lama (hash file lama),
+- file .cs3 di CDN sebagian sudah baru (hash baru),
+- -> `fileHash` tidak cocok -> **install gagal** untuk semua plugin.
+
+Diperiksa juga: jsDelivr dalam keadaan "campur" -- `plugins.json` masih v2
+Loklok, tapi Dutamovie/IdnMovie sudah dex 035, Oploverz masih dex 038.
+
+### Fix permanen — pin semua URL ke tag immutable
+
+`builds/repo.json` dan `builds/plugins.json` sekarang memakai tag release
+sebagai "ref", bukan branch `main`:
+
+```
+https://raw.githubusercontent.com/diioradhitya/CS3xHermes/<TAG>/builds/plugins.json
+https://raw.githubusercontent.com/diioradhitya/CS3xHermes/<TAG>/builds/<P>.cs3
+```
+
+jsDelivr merepresentasikan tag sebagai `@<TAG>`, dan konten sebuah tag tidak
+pernah berubah -> cache CDN tidak bisa basi -> hash selalu cocok -> install
+tidak pernah gagal karena hash. Manifest yang basi (client masih pegang
+manifest versi lama) menunjuk file versi lama yang masih ada, jadi tetap
+konsisten.
+
+`build.sh` sekarang:
+- `RELEASE_TAG` (default `build-<UTC>`) dipakai untuk rewrite URL di
+  `builds/plugins.json` + `builds/repo.json`,
+- saat `--publish`, tag dibuat dan di-push **setelah** commit, jadi isi tag
+  persis dengan artifact yang di-publish.
+
+Release berjalan: tag `build-20261022-1330`, commit `49b463f`.
+
+### Verifikasi di perangkat (box, Android 6.0.1)
+
+- Repo didaftarkan ulang di app dengan URL tag
+  `.../build-20261022-1330/builds/repo.json` (repo `main` lama dihapus,
+  `Freemium_Repo` milik user utuh).
+- Manifest di app langsung shows versi baru (Dutamovie v2, IdnMovie v10,
+  Kawanfilm v8, Harufilm v15, Loklok v3).
+- **20/20 plugin repo ini** ter-install dan `Loaded plugin ... successfully`,
+  **0** error `Unrecognized version` / `ClassNotFoundException`.
+- Daftar provider berisi semua plugin kita; Loklok aktif: Beranda termuat
+  ("Drakor Terbaru", "Film Trending"), kartu poster seragam (tidak campur
+  potrait/landscape), detail page jalan (10 Episode, badge "Loklok").
+- Poster: 30/30 item drakorid di API convert -> 300x420 (dicek live lewat
+  `convert.d-cdn.me`).
+
+### Catatan untuk user
+
+Kalau install plugin gagal dengan pesan hash/error setelah release baru:
+hapus repo lama di `Settings > Ekstensi`, lalu tambah ulang dengan URL versi
+TAG (dari commit release terbaru, contoh
+`https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261022-1330/builds/repo.json`).
+Atau tunggu <= 12 jam sampai cache jsDelivr kedaluwarsa.
+
 ## 2026-10-21 (sore) — Perbaikan dex: plugin tidak bisa dimuat di Android 6
 
 ### Gejala

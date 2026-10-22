@@ -57,13 +57,33 @@ for f in */build/*.cs3; do
 done
 cp build/plugins.json builds/plugins.json
 
-# makePluginsJson menulis URL artifact tanpa segmen branch:
+# makePluginsJson menulis URL artifact tanpa segmen ref:
 #   https://raw.githubusercontent.com/<repo>/builds/<P>.cs3
-# padahal artifact dipublikasikan di branch "main", jadi URL yang benar:
-#   https://raw.githubusercontent.com/<repo>/main/builds/<P>.cs3
-# Tanpa perbaikan ini, manifest yang dipublikasikan menunjuk file yang tidak ada.
-sed -i "s#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/builds/#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/builds/#g" builds/plugins.json
+# Semua URL artifact DIPIN ke tag release (RELEASE_TAG), bukan ke branch
+# "main". Alasannya: CloudStream (kalau setting "jsDelivr CDN" aktif)
+# mengubah URL raw.githubusercontent.com menjadi
+#   https://cdn.jsdelivr.net/gh/<repo>@<ref>/...
+# dan jsDelivr meng-cache file GitHub dengan s-maxage=43200 (12 JAM).
+# File yang kontennya berubah di URL yang sama akanPresentation basi ->
+# manifest lama + hash lama + file baru = hash mismatch = INSTALL GAGAL.
+# Dengan URL yang dipin ke TAG, isi file tidak pernah berubah, jadi cache
+# jsDelivr selalu benar dan hash selalu cocok.
+RELEASE_TAG="${RELEASE_TAG:-build-$(date -u +%Y%m%d-%H%M)}"
+sed -i "s#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/builds/#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${RELEASE_TAG}/builds/#g" builds/plugins.json
+# repo.json juga harus menunjuk manifest versi tag yang sama
+if [ -f builds/repo.json ]; then
+  python3 - "$RELEASE_TAG" <<'PY'
+import json, sys
+tag = sys.argv[1]
+p = "builds/repo.json"
+d = json.load(open(p))
+d["pluginLists"] = [f"https://raw.githubusercontent.com/diioradhitya/CS3xHermes/{tag}/builds/plugins.json"]
+json.dump(d, open(p, "w"), indent=2, ensure_ascii=False)
+open(p, "a").write("\n")
+PY
+fi
 ls -la builds/*.cs3 builds/plugins.json
+echo "RELEASE_TAG=$RELEASE_TAG"
 
 if [ "${1:-}" = "--publish" ]; then
   step "commit + push to origin/main"
@@ -74,6 +94,11 @@ if [ "${1:-}" = "--publish" ]; then
     git commit -m "build: publish artifacts"
     git push origin main
   fi
+  # Tag release dipakai sebagai "ref" immutable di URL manifest + artifact.
+  # Tag dibuat setelah commit supaya isinya persis artifact yang di-publish.
+  step "publish tag $RELEASE_TAG"
+  git tag -f "$RELEASE_TAG"
+  git push origin "refs/tags/$RELEASE_TAG"
 else
   step "selesai (jalankan dengan --publish untuk commit + push)"
 fi
