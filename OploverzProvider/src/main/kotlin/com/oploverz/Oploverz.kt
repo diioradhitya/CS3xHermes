@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
@@ -278,7 +279,12 @@ class Oploverz : MainAPI() {
         val parsed = Samehadaku.parseOploverzEpisode(doc, data)
         if (parsed != null) {
             val (animeTitle, episodeNumber) = parsed
-            val sameEpisode = Samehadaku.resolveEpisode(animeTitle, episodeNumber)
+            // Batas waktu: jangan menahan UI app > ~20 detik.
+            val sameEpisode =
+                    withTimeout(20_000) {
+                        Samehadaku.guessEpisode(data, episodeNumber)
+                                ?: Samehadaku.resolveEpisode(animeTitle, episodeNumber)
+                    } ?: null
             if (sameEpisode != null) {
                 for (server in Samehadaku.episodeServers(sameEpisode)) {
                     if (server.embedUrl.contains("blogger.com", ignoreCase = true)) {
@@ -327,11 +333,20 @@ class Oploverz : MainAPI() {
 
         if (links.isEmpty()) return false
 
-        // 3) Kirim terurut: yang bisa diputar dulu (kualitas tertinggi),
-        //    Mega di akhir.
+        // 3) Validasi link media: beberapa embedder/blogger balas 403/400
+        //    (video sudah mati / diblokir). Link seperti itu dibuang supaya
+        //    sumber pertama yangOffer app benar-benar bisa diputar.
         val playable = links.filter { !it.name.startsWith("Mega", ignoreCase = true) }
         val mega = links.filter { it.name.startsWith("Mega", ignoreCase = true) }
-        for (l in (playable.sortedByDescending { it.quality } + mega.sortedByDescending { it.quality })) {
+        val alive = mutableListOf<ExtractorLink>()
+        val dead = mutableListOf<ExtractorLink>()
+        for (l in playable.sortedByDescending { it.quality }) {
+            if (isMediaLinkAlive(l.url, l.referer)) alive.add(l) else dead.add(l)
+        }
+        // Urutan: link hidup (kualitas tertinggi) -> link yang gagal
+        // divalidasi (fallback, mis. video Blogger yang keburu diblokir
+        // sesaat) -> Mega (butuh extractor mega.nz, tidak ada di CloudStream).
+        for (l in (alive + dead + mega.sortedByDescending { it.quality })) {
             callback(l)
         }
         return true

@@ -52,6 +52,29 @@ internal object Samehadaku {
         return title to num
     }
 
+
+    /**
+     * Tebak cepat URL episode samehadaku dari slug episode Oploverz.
+     * Oploverz: "/<slug>-episode-<N>-subtitle-indonesia/"
+     * Samehadaku: "/<slug>-episode-<N>/"
+     * Kalau slug-nya sama (umumnya), 1 request cukup - tidak perlu pencarian.
+     */
+    suspend fun guessEpisode(oploverzUrl: String, number: Int): String? {
+        val path = oploverzUrl.substringAfterLast("/").substringBefore("?")
+        val slug = path.substringBefore("-episode-").trim('-')
+        if (slug.isEmpty()) return null
+        for (n in listOf(number.toString(), number.toString().padStart(2, '0'))) {
+            val guess = "$BASE/$slug-episode-$n/"
+            try {
+                val body = app.get(guess, headers = mapOf("User-Agent" to BROWSER_UA)).text
+                if (body.contains("player-option")) return guess
+            } catch (e: Throwable) {
+                // slug berbeda -> caller pakai jalur pencarian
+            }
+        }
+        return null
+    }
+
     /** Cari URL halaman episode di Samehadaku. Null kalau tidak ada. */
     suspend fun resolveEpisode(title: String, number: Int): String? {
         val q = java.net.URLEncoder.encode(title, "UTF-8")
