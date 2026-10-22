@@ -298,8 +298,8 @@ class UpBolt : StreamWishExtractor() {
                 if (variants.isEmpty()) {
                     callback(
                             newExtractorLink(
-                                    title?.ifBlank { null } ?: "UpBolt",
                                     "UpBolt",
+                                    title?.ifBlank { null } ?: "UpBolt",
                                     m3u8,
                                     ExtractorLinkType.M3U8
                             ) {
@@ -310,8 +310,8 @@ class UpBolt : StreamWishExtractor() {
                     for ((vUrl, vQuality) in variants) {
                         callback(
                                 newExtractorLink(
-                                        title?.ifBlank { null } ?: "UpBolt",
                                         "UpBolt",
+                                        title?.ifBlank { null } ?: "UpBolt",
                                         vUrl,
                                         ExtractorLinkType.M3U8
                                 ) {

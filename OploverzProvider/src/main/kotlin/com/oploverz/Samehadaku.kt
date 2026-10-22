@@ -22,9 +22,15 @@ internal object Samehadaku {
             val embedUrl: String,
             val referer: String
     ) {
+        /** True kalau server ini mega.nz (butuh extractor yang tidak ada di CloudStream). */
+        val isMega: Boolean
+            get() = embedUrl.contains("mega.nz", ignoreCase = true)
+
         val quality: Int
             get() =
                     when {
+                        label.contains("4k", true) -> Qualities.P2160.value
+                        label.contains("2160", true) -> Qualities.P2160.value
                         label.contains("1080", true) -> Qualities.P1080.value
                         label.contains("720", true) -> Qualities.P720.value
                         label.contains("480", true) -> Qualities.P480.value
@@ -170,11 +176,19 @@ internal object Samehadaku {
                             ?: continue
             val url = src.trim().replace("&amp;", "&")
             if (url.isEmpty()) continue
-            // label server diambil dari <span> tepat setelah tag pembuka
-            val after = html.substring(m.range.last + 1, (m.range.last + 260).coerceAtMost(html.length))
+            // Label server = teks di dalam div (mis. "Mega 1080p").
+            // Markup antar server bisa berbeda (span, span bersarang, atau
+            // teks langsung), jadi semua tag di dalam div dibuang dulu.
+            val closeAt = html.indexOf("</div>", m.range.last).let { if (it < 0) m.range.last + 600 else it }
+            val inner = html.substring(m.range.last + 1, (closeAt).coerceAtMost(html.length))
             val label =
-                    Regex("""<span[^>]*>([^<]{1,40})</span>""")
-                            .find(after)?.groupValues?.get(1)?.trim().orEmpty()
+                    inner.replace(Regex("""<[^>]*>"""), " ")
+                            .replace("&nbsp;", " ")
+                            .trim()
+                            .split(Regex("""\\s+"""))
+                            .firstOrNull { it.isNotEmpty() }
+                            .orEmpty()
+                            .trim('"', '\'', ',', ';', ':')
             if (out.any { it.embedUrl == url }) continue
             out.add(Server(label.ifBlank { "Samehadaku" }, url, episodeUrl))
         }

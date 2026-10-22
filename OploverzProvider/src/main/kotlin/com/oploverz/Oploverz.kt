@@ -296,8 +296,8 @@ class Oploverz : MainAPI() {
                     } else {
                         links.add(
                                 newExtractorLink(
-                                        server.label,
                                         "Samehadaku",
+                                        server.label.ifBlank { "Mega" },
                                         server.embedUrl,
                                         ExtractorLinkType.VIDEO
                                 ) {
@@ -336,8 +336,8 @@ class Oploverz : MainAPI() {
         // 3) Validasi link media: beberapa embedder/blogger balas 403/400
         //    (video sudah mati / diblokir). Link seperti itu dibuang supaya
         //    sumber pertama yangOffer app benar-benar bisa diputar.
-        val playable = links.filter { !it.name.startsWith("Mega", ignoreCase = true) }
-        val mega = links.filter { it.name.startsWith("Mega", ignoreCase = true) }
+        val playable = links.filter { !it.url.contains("mega.nz", ignoreCase = true) }
+        val mega = links.filter { it.url.contains("mega.nz", ignoreCase = true) }
         val alive = mutableListOf<ExtractorLink>()
         val dead = mutableListOf<ExtractorLink>()
         for (l in playable.sortedByDescending { it.quality }) {
