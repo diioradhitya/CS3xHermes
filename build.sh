@@ -70,18 +70,12 @@ cp build/plugins.json builds/plugins.json
 # jsDelivr selalu benar dan hash selalu cocok.
 RELEASE_TAG="${RELEASE_TAG:-build-$(date -u +%Y%m%d-%H%M)}"
 sed -i "s#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/builds/#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${RELEASE_TAG}/builds/#g" builds/plugins.json
-# repo.json juga harus menunjuk manifest versi tag yang sama
-if [ -f builds/repo.json ]; then
-  python3 - "$RELEASE_TAG" <<'PY'
-import json, sys
-tag = sys.argv[1]
-p = "builds/repo.json"
-d = json.load(open(p))
-d["pluginLists"] = [f"https://raw.githubusercontent.com/diioradhitya/CS3xHermes/{tag}/builds/plugins.json"]
-json.dump(d, open(p, "w"), indent=2, ensure_ascii=False)
-open(p, "a").write("\n")
-PY
-fi
+# builds/repo.json SENGAJA dibiarkan menunjuk path STABIL
+#   .../main/builds/plugins.json
+# Jadi user cukup daftar repo sekali, tidak perlu daftar ulang tiap release.
+# Yang di-pin ke tag hanya URL ARTIFACT di dalam manifest: supaya file yang
+# diunduh app tidak pernah berubah isinya (hash selalu cocok) walau CDN
+# (jsDelivr) cache 12 jam.
 ls -la builds/*.cs3 builds/plugins.json
 echo "RELEASE_TAG=$RELEASE_TAG"
 

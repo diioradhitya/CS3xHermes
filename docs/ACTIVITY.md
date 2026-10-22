@@ -58,12 +58,14 @@ Loklok, tapi Dutamovie/IdnMovie sudah dex 035, Oploverz masih dex 038.
 
 ### Fix permanen — pin semua URL ke tag immutable
 
-`builds/repo.json` dan `builds/plugins.json` sekarang memakai tag release
-sebagai "ref", bukan branch `main`:
+Hanya **URL artifact di dalam manifest** yang di-pin ke tag release. URL
+manifest sendiri (`builds/repo.json` -> `pluginLists`) sengaja dibiarkan
+stabil di `.../main/builds/plugins.json`, jadi user cukup daftar repo
+sekali dan tidak perlu daftar ulang tiap release:
 
 ```
-https://raw.githubusercontent.com/diioradhitya/CS3xHermes/<TAG>/builds/plugins.json
-https://raw.githubusercontent.com/diioradhitya/CS3xHermes/<TAG>/builds/<P>.cs3
+builds/repo.json      -> .../main/builds/plugins.json     (STABIL, sekali daftar)
+builds/plugins.json   -> .../<TAG>/builds/<P>.cs3          (pin ke tag, immutable)
 ```
 
 jsDelivr merepresentasikan tag sebagai `@<TAG>`, dan konten sebuah tag tidak
