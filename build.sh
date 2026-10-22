@@ -70,12 +70,26 @@ cp build/plugins.json builds/plugins.json
 # jsDelivr selalu benar dan hash selalu cocok.
 RELEASE_TAG="${RELEASE_TAG:-build-$(date -u +%Y%m%d-%H%M)}"
 sed -i "s#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/builds/#https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${RELEASE_TAG}/builds/#g" builds/plugins.json
-# builds/repo.json SENGAJA dibiarkan menunjuk path STABIL
-#   .../main/builds/plugins.json
-# Jadi user cukup daftar repo sekali, tidak perlu daftar ulang tiap release.
-# Yang di-pin ke tag hanya URL ARTIFACT di dalam manifest: supaya file yang
-# diunduh app tidak pernah berubah isinya (hash selalu cocok) walau CDN
-# (jsDelivr) cache 12 jam.
+# repo.json harus menunjuk manifest versi TAG yang sama. Alasannya: app
+# memverifikasi `fileHash` saat install. Kalau repo.json menunjuk path mutable
+# (main/builds/plugins.json), client yang masih pegang manifest lama (cache
+# jsDelivr 12 jam) akan menunjuk artifact path LAMA yang isinya sudah
+# diganti -> hash mismatch -> INSTALL GAGAL (terbukti di box:
+# "Extension hash mismatch when validating 'Dutamovie...'"). Dengan tag,
+# manifest lama + artifact lamanya masih utuh dan hash-nya tetap cocok.
+# URL repo yang didaftarkan user tetap STABIL (.../main/builds/repo.json),
+# jadi user tidak perlu daftar ulang repo tiap release.
+if [ -f builds/repo.json ]; then
+  python3 - "$RELEASE_TAG" <<'PY'
+import json, sys
+tag = sys.argv[1]
+p = "builds/repo.json"
+d = json.load(open(p))
+d["pluginLists"] = [f"https://raw.githubusercontent.com/diioradhitya/CS3xHermes/{tag}/builds/plugins.json"]
+json.dump(d, open(p, "w"), indent=2, ensure_ascii=False)
+open(p, "a").write("\n")
+PY
+fi
 ls -la builds/*.cs3 builds/plugins.json
 echo "RELEASE_TAG=$RELEASE_TAG"
 
