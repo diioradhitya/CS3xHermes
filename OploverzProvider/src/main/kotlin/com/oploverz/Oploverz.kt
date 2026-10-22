@@ -92,7 +92,7 @@ class Oploverz : MainAPI() {
             // yang salah.
             val target = if (path.startsWith("http")) path else host + path
             try {
-                val doc = app.get(target).document
+                val doc = app.get(target, headers = mapOf("User-Agent" to BROWSER_UA)).document
                 if (doc.body() != null && doc.html().contains(marker, ignoreCase = true)) {
                     hostIndex = idx
                     mainUrl = host
@@ -263,26 +263,77 @@ class Oploverz : MainAPI() {
     ): Boolean {
         val doc = fetchDoc(data, "iframe")
 
-        // Player Madara ada di <div id="embed_holder"><div id="pembed"><iframe ...>
-        // Tiap episode bisa punya embedder berbeda (upbolt.to, blogger.com,
-        // filedon.co, ...), jadi semua iframe dicoba, bukan cuma yang pertama.
+        // Link dikumpulkan dulu, baru dikirim ke callback terurut: link yang
+        // bisa diputar (Blogger/UpBolt) lebih dulu, link Mega (butuh
+        // extractor mega.nz yang tidak ada di CloudStream) di akhir.
+        val links = mutableListOf<ExtractorLink>()
+
+        // 1) SUMBER UTAMA: samehadaku.how
+        //    Halaman episode samehadaku punya beberapa server:
+        //    "Blogspot" (blogger.com, bisa 360p/720p/1080p) dan
+        //    "Mega 480p/720p/1080p" (mega.nz/embed/...).
+        //    Oploverz hanya menyediakan satu embedder per episode
+        //    (Blogger 360p / UpBolt 360p-480p), jadi samehadaku dipakai
+        //    sebagai sumber video utama.
+        val parsed = Samehadaku.parseOploverzEpisode(doc, data)
+        if (parsed != null) {
+            val (animeTitle, episodeNumber) = parsed
+            val sameEpisode = Samehadaku.resolveEpisode(animeTitle, episodeNumber)
+            if (sameEpisode != null) {
+                for (server in Samehadaku.episodeServers(sameEpisode)) {
+                    if (server.embedUrl.contains("blogger.com", ignoreCase = true)) {
+                        // Extractor Blogger custom: mengambil SEMUA itag
+                        // (360p/720p/1080p) jadi link terpisah.
+                        Blogger().getUrl(server.embedUrl, server.referer, subtitleCallback) {
+                            links.add(it)
+                        }
+                    } else {
+                        links.add(
+                                newExtractorLink(
+                                        server.label,
+                                        "Samehadaku",
+                                        server.embedUrl,
+                                        ExtractorLinkType.VIDEO
+                                ) {
+                                    this.quality = server.quality
+                                    this.referer = server.referer
+                                })
+                    }
+                }
+            }
+        }
+
+        // 2) FALLBACK / TAMBAHAN: embedder bawaan Oploverz
+        //    Player Madara ada di <div id="embed_holder"><div id="pembed">
+        //    <iframe ...>. Tiap episode bisa punya embedder berbeda (upbolt.to,
+        //    blogger.com, filedon.co, ...), jadi semua iframe dicoba.
         val iframes =
                 doc.select("#pembed iframe[src], #embed_holder iframe[src], iframe[src]")
                         .map { it.attr("src") }
                         .filter { it.isNotEmpty() }
                         .distinct()
-        if (iframes.isEmpty()) return false
+        if (iframes.isNotEmpty()) {
+            val seen = links.map { it.name to it.quality }.toMutableSet()
+            val collect: (ExtractorLink) -> Unit = { link ->
+                val key = link.name to link.quality
+                if (seen.add(key)) links.add(link)
+            }
+            for (iframe in iframes) {
+                // referer = URL halaman episode (bukan root situs): sebagian
+                // embedder (blogger, dll) memvalidasi referer ini.
+                loadExtractor(fixUrl(iframe), data, subtitleCallback, collect)
+            }
+        }
 
-        var found = 0
-        val collect: (ExtractorLink) -> Unit = { link ->
-            found++
-            callback(link)
+        if (links.isEmpty()) return false
+
+        // 3) Kirim terurut: yang bisa diputar dulu (kualitas tertinggi),
+        //    Mega di akhir.
+        val playable = links.filter { !it.name.startsWith("Mega", ignoreCase = true) }
+        val mega = links.filter { it.name.startsWith("Mega", ignoreCase = true) }
+        for (l in (playable.sortedByDescending { it.quality } + mega.sortedByDescending { it.quality })) {
+            callback(l)
         }
-        for (iframe in iframes) {
-            // referer = URL halaman episode (bukan root situs): sebagian
-            // embedder (blogger, dll) memvalidasi referer ini.
-            loadExtractor(fixUrl(iframe), data, subtitleCallback, collect)
-        }
-        return found > 0
+        return true
     }
 }

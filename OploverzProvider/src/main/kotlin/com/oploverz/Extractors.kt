@@ -66,7 +66,7 @@ open class Dingtezuni : ExtractorApi() {
             "User-Agent" to USER_AGENT,
         )
 
-        val response = app.get(getEmbedUrl(url), referer = referer)
+        val response = app.get(getEmbedUrl(url), referer = referer, headers = mapOf("User-Agent" to BROWSER_UA))
         val script = if (!getPacked(response.text).isNullOrEmpty()) {
             var result = getAndUnpack(response.text)
             if (result.contains("var links")) result = result.substringAfter("var links")
@@ -207,12 +207,25 @@ internal fun qualityByHeight(h: Int): Int =
  * offer 360p/480p/720p/1080p sekaligus kalau memang tersedia.
  */
 internal suspend fun parseM3u8Variants(masterUrl: String): List<Pair<String, Int>> {
-    val text =
+    // CDN upbolt kadang gagal saat request pertama (master berisi koma di
+    // path), jadi dicoba ulang; kalau masih gagal, query string dibuang.
+    val candidates =
+            listOf(masterUrl, masterUrl.substringBefore("?")).distinct()
+    var text: String? = null
+    for (c in candidates) {
+        for (attempt in 0..1) {
             try {
-                app.get(masterUrl).text
+                val r = app.get(c, referer = "https://upbolt.to/", headers = mapOf("User-Agent" to BROWSER_UA)).text
+                if (r.contains("#EXTM3U")) {
+                    text = r
+                    break
+                }
             } catch (e: Throwable) {
-                return emptyList()
             }
+        }
+        if (text != null) break
+    }
+    if (text == null) return emptyList()
     if (!text.contains("#EXTM3U")) return emptyList()
     val out = mutableListOf<Pair<String, Int>>()
     val lines = text.lines()
@@ -335,7 +348,7 @@ class Blogger : ExtractorApi() {
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
     ) {
-        val html = app.get(url).text
+        val html = app.get(url, headers = mapOf("User-Agent" to BROWSER_UA)).text
         // Halaman Blogger memuat satu URL GoogleVideo per itag (18=360p,
         // 22=720p, 37=1080p, ...). Semua varian dikembalikan supaya aplikasi
         // bisa memilih track video resolusi tertinggi yang tersedia.
