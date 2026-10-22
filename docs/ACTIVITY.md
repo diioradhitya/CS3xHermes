@@ -7,6 +7,74 @@ Format satu entri per batch kerja, terbaru di atas.
 
 ---
 
+## 2026-10-22 (malam) — Oploverz pindah ke domain baru (oploverz.am/.ch/.site)
+
+### Gejala
+
+Domain lama `anime.oploverz.ac` **mati**: DNS-nya resolve ke `43.173.57.48`
+(`blockpage.xlaxiata.id`) -> connection timeout. `oploverz.site` resolve ke IP
+yang sama, jadi juga tidak bisa dipakai. Plugin tidak bisa ambil data apa pun.
+
+### Cek ketiga domain
+
+| Domain | Hasil |
+|---|---|
+| oploverz.site | IP sama dgn situs lama (blockpage) -> HTTP 000, tidak bisa dipakai |
+| oploverz.am | HTTP 200, situs Madara aktif |
+| oploverz.ch | HTTP 200, situs Madara aktif |
+
+Fallback berurutan: `oploverz.am` -> `oploverz.ch` -> `oploverz.site`.
+
+### Situs baru = tema Madara (struktur beda total)
+
+- Listing: `/anime/?status=&type=&order=update[&page=N]`
+- Halaman anime: `/anime/<slug>/`
+- Halaman episode: `/<slug>-episode-<N>-subtitle-indonesia/`
+- Cari: `/?s=<query>`
+- Item: `<article class="bs">` > `div.bsx` > `a[href]` + `img[itemprop=image]`
+  + `div.typez` (tipe) + `span.epx` (status) + `h2` (judul)
+- Episode: `div.eplister` > `li[data-index]` > `a` > `div.epl-num`
+- Info box: `<span><b>Type:</b> TV</span>`, `Status`, `Released` (tahun)
+- Player: `<div id="embed_holder"><div id="pembed"><iframe src=...>`
+
+### Perubahan
+
+- `mainUrl` -> daftar host + failover di `fetchDoc()`: hanya menerima response
+  yang memuat marker DOM yang diharapkan (jadi halaman blokir/404 tidak
+  dianggap sukses). URL absolut **tidak** ditukar host.
+- `getMainPage` -> `/anime/?...&order=<order>&page=N`; `search` -> `/?s=`
+- `load` -> judul dari `h1.entry-title`, tipe/status/tahun dari info box,
+  poster `div.thumb > img`, episode dari `div.eplister` (urut naik)
+- Film (`Type: Movie`) -> `MovieLoadResponse` dengan `dataUrl` = post episode
+  pertama (halaman `/anime/<movie>/` cuma daftar, player-nya di post episode).
+  Tanpa ini film jadi 0 episode.
+- `loadLinks` -> semua iframe dicoba (tiap episode beda embedder: upbolt.to,
+  blogger.com, filedon.co) + referer = URL halaman episode
+- Extractor **UpBolt** (format baru): POST ke `/dl`
+  (`op=embed&file_code=..&auto=1&referer=..`) -> master.m3u8 + `.vtt` +
+  kualitas di `<title>`; ekstraktor StreamWish bawaan tidak bisa
+- Extractor **Blogger** (baru): URL GoogleVideo dibungkus escape unicode
+  (`\u003d`, `\u0026`) dan delimiter `&quot;`; pola
+  `https://[^"&]*googlevideo\.com/videoplayback[^"&]*` + decode
+- `addMalId`/`addAniListId` dibungkus `runCatching` (id dari tracker kadang
+  bukan JSON string -> SDK lempar `JsonDecodingException` yang menggagalkan load)
+
+### Verifikasi
+
+- Harness JVM live (`/root/opl-verify`): **pass=31 fail=0** — 4 tab beranda
+  (10 item), pagination tanpa duplikat, search 20 hasil, SERI Bleach 413
+  episode, FILM MovieLoadResponse + dataUrl, loadLinks -> link Blogger itag=18
+  (URL valid), HLS upbolt probe OK
+- Box (Android 6.0.1): Oploverz **v8** ter-install & `Loaded plugin
+  OploverzProvider successfully`, 0 error. Dipilih jadi provider aktif ->
+  beranda termuat "JoJo's Bizarre Adventure 6 : Steel Ball Run" (2026) dengan
+  genre Action/Adventure/Historical/Mystery/Seinen/Shounen
+- Publish: tag `build-20261022-1745`, commit `18ebed7`; artifact 42663 B,
+  sha256 `32600872edab4646...`, dex 035, string baru ada & string lama hilang
+- TIDAK DIVERIFIKASI: playback akhir di perangkat (butuh remote). Episode
+  film contoh (Naruto Kecil Movie 3) sumbernya `filedon.co` yang balas
+  Cloudflare 522 (server embedder mati, bukan masalah plugin)
+
 ## 2026-10-22 — Dua bug global plugin (install error + plugin tak terbaca di Beranda)
 
 ### Gejala di TV box (B860H V2.1, Android 6.0.1 / API 23)
