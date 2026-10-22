@@ -179,8 +179,14 @@ class LoklokProvider : MainAPI() {
         if (u.startsWith(CONVERT)) {
             return u.replace(Regex("/\\d+x\\d+/1\\.jpg$"), "/$POSTER_SIZE/1.jpg")
         }
-        val b64 = java.util.Base64.getUrlEncoder().withoutPadding()
-            .encodeToString(u.toByteArray())
+        // android.util.Base64 (API 8+), BUKAN java.util.Base64 (API 26) --
+        // plugin ini harus jalan di TV box Android 6 (API 23).
+        val b64 = android.util.Base64.encodeToString(
+            u.toByteArray(),
+            android.util.Base64.URL_SAFE or
+                android.util.Base64.NO_WRAP or
+                android.util.Base64.NO_PADDING
+        )
         return "$CONVERT/$b64/$POSTER_SIZE/1.jpg"
     }
 

@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.TextNode
-import java.util.Base64
+import android.util.Base64
 
 class LayarAsia : MainAPI() {
     override var mainUrl = "https://server-1.layar.asia"
@@ -340,8 +340,11 @@ class LayarAsia : MainAPI() {
             .mapNotNull { opt ->
                 val encoded = opt.attr("value")
                 if (encoded.length < 20) return@mapNotNull null
+                // android.util.Base64 (API 8+) bukan java.util.Base64 (API 26).
+                // Padding harus lengkap, jadi ditambahkan kalau kurang.
+                val padded = encoded.padEnd((encoded.length + 3) / 4 * 4, '=')
                 val decoded = runCatching {
-                    String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+                    String(Base64.decode(padded, Base64.DEFAULT), Charsets.UTF_8)
                 }.getOrNull() ?: return@mapNotNull null
                 if (!decoded.contains("iframe", ignoreCase = true)) return@mapNotNull null
                 val src = iframeSrcRegex.find(decoded)?.groupValues?.getOrNull(1)?.trim()

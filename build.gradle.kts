@@ -44,7 +44,14 @@ subprojects {
         namespace = "com.${project.name.removeSuffix("Provider").lowercase()}"
 
         defaultConfig {
-            minSdk = 26
+            // minSdk 21 (bukan 26): D8 memetakan minApi >= 26 ke format dex
+            // "038" (dex\n038), sedangkan ART Android 6.0.1 (API 23) hanya
+            // paham dex "037" -> "Unrecognized version number in ...cs3: 0 3 8"
+            // lalu ClassNotFoundException, jadi SEMUA plugin gagal dimuat di
+            // TV box Android 6. minSdk 21 membuat D8 keluarkan dex 037.
+            // Pakai API level > 21 harus dicek manual (mis. android.util.Base64
+            // untuk API 8+, BUKAN java.util.Base64 yang butuh API 26).
+            minSdk = 21
             compileSdkVersion(35)
             targetSdk = 35
         }

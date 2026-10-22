@@ -49,7 +49,7 @@
 //    convert.d-cdn.me. Sebelumnya campur: filmbox 0.56-0.80 (300x450 s/d
 //    3900x5700), drakorid 180x200 (nyaris persegi), iqiyi bahkan bisa
 //    landscape (480x270), animekompi 424x600. Fallback landscape iqiyi dihapus.
-version = 2
+version = 3
 
 cloudstream {
     description = "Loklok - Drama, Film & Anime Sub Indo (loklok.my.id)"

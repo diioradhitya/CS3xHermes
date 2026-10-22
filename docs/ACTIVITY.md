@@ -7,6 +7,42 @@ Format satu entri per batch kerja, terbaru di atas.
 
 ---
 
+## 2026-10-21 (sore) — Perbaikan dex: plugin tidak bisa dimuat di Android 6
+
+### Gejala
+
+Di TV box (B860H V2.1, Android 6.0.1 / API 23) **semua** plugin gagal
+dimuat dan tidak ada provider di beranda. Dari log CloudStream di box:
+
+```
+Failed to open dex file '.../LoklokProvider.768872753.cs3' from memory:
+  Unrecognized version number in ...cs3: 0 3 8
+ClassNotFoundException: Didn't find class "com.loklok.LoklokPlugin"
+```
+
+### Akar masalah
+
+- Semua plugin dibangun dengan `minSdk = 26` -> D8 keluarkan format dex
+  **038**, yang hanya dipahami ART Android 8.0+ (API 26).
+- ART Android 6.0.1 (API 23) maximum dex 037/035 -> **semua** plugin gagal,
+  bukan cuma Loklok (Oploverz, Filmlokal, Filmkita, dll. error identik).
+- `java.util.Base64` (dipakai LayarAsia + Loklok) butuh API 26 -> harus
+  diganti `android.util.Base64` (API 8+) kalau minSdk diturunkan.
+
+### Perbaikan
+
+1. `build.gradle.kts`: `minSdk 26 -> 21`. Semua 20 modul kini menghasilkan
+   dex **035** (dicek satu per satu lewat magic bytes).
+2. `LayarAsiaProvider` + `LoklokProvider`: `java.util.Base64` ->
+   `android.util.Base64` (URL_SAFE|NO_WRAP|NO_PADDING), padding ditambahkan
+   manual untuk `Base64.decode`.
+3. **Version semua 20 modul dinaikkan 1.** Ini wajib: CloudStream menaruh
+   file plugin sebagai `<internalName>.<hashCode(internalName)>.cs3` --
+   angka itu BUKAN hash isi file (dihitung ulang: persis
+   `String.hashCode(nama)`), jadi file lama tidak otomatis tergantikan.
+   CloudStream hanya mengunduh ulang kalau `version` di manifest naik.
+   Tanpa bump ini, box tetap memakai file dex 038 yang rusak.
+
 ## 2026-10-21 (siang) — Loklok v2: perbaikan dari test di perangkat
 
 ### Yang dikoreksi

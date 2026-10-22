@@ -1,4 +1,4 @@
-version = 1
+version = 2
 
 cloudstream {
     description = "DutaMovie - Streaming Movie and TV Series"

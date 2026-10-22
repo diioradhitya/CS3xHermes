@@ -1,4 +1,4 @@
-version = 1
+version = 2
 
 cloudstream {
     description = "WGFilm21 - Streaming Movie Sub Indo"
