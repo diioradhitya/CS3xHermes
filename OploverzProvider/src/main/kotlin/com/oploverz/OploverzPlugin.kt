@@ -13,6 +13,7 @@ class OploverzPlugin : Plugin() {
         registerMainAPI(Oploverz())
 
         registerExtractorAPI(UpBolt())
+        registerExtractorAPI(Blogger())
         registerExtractorAPI(Hglink())
         registerExtractorAPI(Short())
         registerExtractorAPI(Shorticu())

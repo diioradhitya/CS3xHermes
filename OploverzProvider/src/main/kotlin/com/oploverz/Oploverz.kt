@@ -7,29 +7,61 @@ import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
+/**
+ * Oploverz (anime sub Indo).
+ *
+ * SITUS BARU (tema WordPress "Madara"):
+ * - Listing anime : /anime/?status=&type=&order=update[&page=N]
+ * - Halaman anime : /anime/<slug>/
+ * - Halaman episode: /<slug>-episode-<N>-subtitle-indonesia/  (iframe player inline)
+ * - Pencarian     : /?s=<query>
+ *
+ * DOM baru (beda total dari situs lama anime.oploverz.ac yang sudah mati):
+ * - item listing  : <article class="bs"> > div.bsx > a[href] + img[itemprop=image]
+ *                    + div.typez (tipe) + span.epx (status) + h2 (judul)
+ * - halaman anime : h1.entry-title, div.typez, span.status, div.eplister > li > a > div.epl-num
+ * - episode       : <iframe src="https://upbolt.to/e/..."> (diparse langsung)
+ *
+ * Domain yang dipakai (fallback berurutan, otomatis pindah kalau satu mati):
+ * oploverz.am -> oploverz.ch -> oploverz.site
+ * Catatan: anime.oploverz.ac DAN oploverz.site sekarang resolve ke IP
+ * blockpage.xlaxiata.id (halaman blokir) => tidak bisa dipakai, tapi tetap
+ * dicoba sebagai fallback terakhir.
+ */
 class Oploverz : MainAPI() {
-    override var mainUrl = "https://anime.oploverz.ac"
     override var name = "Oploverz"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
+
+    private val hosts = listOf(
+            "https://oploverz.am",
+            "https://oploverz.ch",
+            "https://oploverz.site"
+    )
+
+    /** Index host yang sedang dipakai; naik setiap kali ada host gagal. */
+    @Volatile private var hostIndex = 0
+
+    override var mainUrl: String = hosts[0]
 
     companion object {
         fun getType(t: String): TvType {
-            return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie", true)) TvType.AnimeMovie else TvType.Anime
+            val s = t.trim()
+            return when {
+                s.contains("OVA", true) || s.contains("Special", true) -> TvType.OVA
+                s.contains("Movie", true) || s.contains("Film", true) -> TvType.AnimeMovie
+                else -> TvType.Anime
+            }
         }
 
         fun getStatus(t: String?): ShowStatus {
-            return when (t) {
-                "Finished Airing" -> ShowStatus.Completed
-                "Completed" -> ShowStatus.Completed
-                "Currently Airing" -> ShowStatus.Ongoing
-                "Ongoing" -> ShowStatus.Ongoing
+            return when (t?.trim()) {
+                "Ongoing", "Currently Airing" -> ShowStatus.Ongoing
                 else -> ShowStatus.Completed
             }
         }
@@ -43,106 +75,170 @@ class Oploverz : MainAPI() {
                     "rating" to "Top Rated",
             )
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document =
-                app.get("$mainUrl/anime-list/page/$page/?title&order=${request.data}&status&type")
-                        .document
-        val home = document.select("div.relat > article").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(request.name, home)
+    /**
+     * Ambil halaman dengan failover antar domain.
+     *
+     * @param marker potongan DOM yang wajib ada supaya response dianggap valid
+     * (mencegah 404 / halaman blokir dianggap erfolgre).
+     */
+    private suspend fun fetchDoc(path: String, marker: String): Document {
+        var lastError: Throwable? = null
+        // coba semua host, mulai dari yang terakhir berhasil
+        for (offset in hosts.indices) {
+            val idx = (hostIndex + offset) % hosts.size
+            val host = hosts[idx]
+            // URL absolut dipakai apa adanya (bukan ditukar host), supaya
+            // halaman yang diketahui dari domain lain tidak diambil dari domain
+            // yang salah.
+            val target = if (path.startsWith("http")) path else host + path
+            try {
+                val doc = app.get(target).document
+                if (doc.body() != null && doc.html().contains(marker, ignoreCase = true)) {
+                    hostIndex = idx
+                    mainUrl = host
+                    return doc
+                }
+            } catch (e: Throwable) {
+                lastError = e
+            }
+        }
+        throw lastError ?: Exception("Oploverz: semua domain gagal diakses")
     }
 
-    private fun getProperAnimeLink(uri: String): String {
-        return if (uri.contains("/anime/")) {
-            uri
-        } else {
-            var title = uri.substringAfter("$mainUrl/")
-            title =
-                    when {
-                        (title.contains("-episode")) && !(title.contains("-movie")) ->
-                                Regex("(.+)-episode").find(title)?.groupValues?.get(1).toString()
-                        (title.contains("-movie")) ->
-                                Regex("(.+)-movie").find(title)?.groupValues?.get(1).toString()
-                        else -> title
-                    }
-            "$mainUrl/anime/$title"
-        }
+    /** Link anime canonical: /anime/<slug>/ */
+    private fun animeLink(raw: String): String {
+        val path = raw.substringAfter("://").substringAfter('/')
+        if (path.startsWith("anime/")) return raw
+        var slug = path.substringBefore('/').substringBefore('?')
+        // slug episode: "bleach-episode-415-subtitle-indonesia" -> "bleach"
+        slug = slug.replace(Regex("-(episode|episode-\\d+)(-\\d+)?-subtitle-indonesia$"), "")
+        slug = slug.replace(Regex("-subtitle-indonesia$"), "")
+        slug = slug.replace(Regex("-episode-\\d+$"), "")
+        return "$mainUrl/anime/$slug/"
+    }
+
+    private fun Element.animeTitle(): String {
+        val tt = selectFirst("div.tt")?.text()?.trim().orEmpty()
+        if (tt.isNotEmpty() && !tt.contains("Episode", true)) return tt
+        val h2 = selectFirst("h2")?.text()?.trim().orEmpty()
+        return h2.replace(Regex("\\s*Episode\\s*\\d+\\s*Subtitle\\s*Indonesia", RegexOption.IGNORE_CASE), "")
+                .trim()
     }
 
     private fun Element.toSearchResult(): AnimeSearchResponse? {
-        val title = this.selectFirst("div.title")?.text()?.trim() ?: return null
-        val href = getProperAnimeLink(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = this.select("img[itemprop=image]").attr("src")
-        val type = getType(this.select("div.type").text().trim())
-        val epNum =
-                this.selectFirst("span.episode")
-                        ?.ownText()
-                        ?.replace(Regex("\\D"), "")
-                        ?.trim()
-                        ?.toIntOrNull()
-        return newAnimeSearchResponse(title, href, type) {
+        val href = selectFirst("a")?.attr("href")?.takeIf { it.isNotEmpty() } ?: return null
+        val title = animeTitle().ifEmpty { return null }
+        val posterUrl = selectFirst("img[itemprop=image]")?.attr("src") ?: selectFirst("img")?.attr("src")
+        val type = getType(selectFirst("div.typez")?.text() ?: selectFirst("div.type")?.text() ?: "")
+        return newAnimeSearchResponse(title, animeLink(href), type) {
             this.posterUrl = posterUrl
-            addSub(epNum)
         }
+    }
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val doc = fetchDoc("/anime/?status=&type=&order=${request.data}&page=$page", "article")
+        val home = doc.select("article.bs").mapNotNull { it.toSearchResult() }
+        return newHomePageResponse(request.name, home)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val anime = mutableListOf<SearchResponse>()
-        (1..2).forEach { page ->
-            val link = "$mainUrl/page/$page/?s=$query"
-            val document = app.get(link).document
-            val media =
-                    document.select(".site-main.relat > article").mapNotNull {
-                        val title = it.selectFirst("div.title > h2")!!.ownText().trim()
-                        val href = it.selectFirst("a")!!.attr("href")
-                        val posterUrl = it.selectFirst("img")!!.attr("src")
-                        val type = getType(it.select("div.type").text().trim())
-                        newAnimeSearchResponse(title, href, type) { this.posterUrl = posterUrl }
-                    }
-            if (media.isNotEmpty()) anime.addAll(media)
+        for (page in 1..2) {
+            val doc = fetchDoc("/?s=$query&page=$page", "article")
+            val media = doc.select("article.bs").mapNotNull { it.toSearchResult() }
+            if (media.isEmpty()) break
+            anime.addAll(media)
         }
         return anime
     }
 
+    /** Ambil nilai field dari info box Madara: <span><b>Type:</b> TV</span> */
+    private fun Element.infoField(label: String): String? =
+            select("span")
+                    .firstOrNull {
+                        it.selectFirst("b")?.text()?.trim()?.removeSuffix(":")?.equals(label, true) == true
+                    }
+                    ?.ownText()
+                    ?.trim()
+                    ?.replace(Regex("^$label\\s*:\\s*", RegexOption.IGNORE_CASE), "")
+                    ?.trim()
+                    ?.ifEmpty { null }
+
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val doc = fetchDoc(url, "eplister")
 
         val title =
-                document.selectFirst("h1.entry-title")
+                doc.selectFirst("h1.entry-title")
                         ?.text()
-                        ?.replace("Subtitle Indonesia", "")
+                        ?.replace(Regex("Subtitle Indonesia", RegexOption.IGNORE_CASE), "")
                         ?.trim()
                         ?: ""
-        val type = getType(document.selectFirst("div.alternati span.type")?.text() ?: "")
-        val year =
-                document.selectFirst("div.alternati a")
-                        ?.text()
-                        ?.filter { it.isDigit() }
-                        ?.toIntOrNull()
-        val episodes =
-                document.select("div.lstepsiode.listeps ul li")
-                        .mapNotNull {
-                            val header = it.selectFirst("a") ?: return@mapNotNull null
-                            val episode = header.text().trim().toIntOrNull()
-                            val link = fixUrl(header.attr("href"))
-                            newEpisode(link){ this.episode = episode}
-                        }
-                        .reversed()
+        val info = doc.selectFirst("div.info-content")
+        val type =
+                getType(
+                        info?.infoField("Type")
+                                ?: doc.selectFirst("div.typez")?.text()
+                                ?: ""
+                )
+        val statusText = info?.infoField("Status") ?: doc.selectFirst("span.status")?.text()?.trim()
+        val year = info?.infoField("Released")?.filter { it.isDigit() }?.take(4)?.toIntOrNull()
 
-        val tracker = APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
+        // daftar episode: <li data-index><a href><div class="epl-num">N</div>
+        val epItems =
+                doc.select("div.eplister li").mapNotNull { li ->
+                    val a = li.selectFirst("a") ?: return@mapNotNull null
+                    val href = a.attr("href")
+                    if (href.isEmpty()) return@mapNotNull null
+                    val num =
+                            li.selectFirst("div.epl-num")
+                                    ?.text()
+                                    ?.trim()
+                                    ?.toIntOrNull()
+                                    ?: a.text().trim().toIntOrNull()
+                    Triple(fixUrl(href), num, li.selectFirst("div.epl-title")?.text()?.trim())
+                }.sortedBy { it.second ?: 0 }
+
+        val episodes =
+                epItems.map { (link, num, epTitle) ->
+                    newEpisode(link) {
+                        this.episode = num
+                        this.name = epTitle
+                    }
+                }
+
+        val tracker =
+                runCatching { APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true) }
+                        .getOrNull()
+        val poster = tracker?.image ?: doc.selectFirst("div.thumb > img")?.attr("src")
+        val cover = tracker?.cover
+        val plot = doc.selectFirst("div.entry-content > p")?.text()?.trim()
+        val genres = doc.select("div.genxed a").map { it.text() }
+        val status = getStatus(statusText)
+
+        // Film (Movie) diserialisasi CloudStream sebagai MovieLoadResponse: tidak
+        // ada daftar episode, tapi punya dataUrl. Untuk film, halaman /anime/xxx
+        // cuma daftar; player-nya ada di post episode (1 entri eplister).
+        if (type == TvType.AnimeMovie || type == TvType.Movie) {
+            val dataUrl = epItems.firstOrNull()?.first ?: url
+            return newMovieLoadResponse(name = title, url = url, type = type, dataUrl = dataUrl) {
+                posterUrl = poster
+                backgroundPosterUrl = cover
+                this.year = year
+                this.plot = plot
+                this.tags = genres
+                runCatching { addMalId(tracker?.malId) }
+            }
+        }
 
         return newAnimeLoadResponse(title, url, type) {
-            posterUrl = tracker?.image ?: document.selectFirst("div.thumb > img")?.attr("src")
-            backgroundPosterUrl = tracker?.cover
+            posterUrl = poster
+            backgroundPosterUrl = cover
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
-            showStatus =
-                    getStatus(
-                            document.selectFirst("div.alternati span:nth-child(2)")?.text()?.trim()
-                    )
-            plot = document.selectFirst("div.entry-content > p")?.text()?.trim()
-            this.tags = document.select("div.genre-info a").map { it.text() }
-            addMalId(tracker?.malId)
-            addAniListId(tracker?.aniId?.toIntOrNull())
+            showStatus = status
+            this.plot = plot
+            this.tags = genres
+            runCatching { addMalId(tracker?.malId) }
         }
     }
 
@@ -152,90 +248,28 @@ class Oploverz : MainAPI() {
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
     ): Boolean {
+        val doc = fetchDoc(data, "iframe")
 
-        val document = app.get(data).document
+        // Player Madara ada di <div id="embed_holder"><div id="pembed"><iframe ...>
+        // Tiap episode bisa punya embedder berbeda (upbolt.to, blogger.com,
+        // filedon.co, ...), jadi semua iframe dicoba, bukan cuma yang pertama.
+        val iframes =
+                doc.select("#pembed iframe[src], #embed_holder iframe[src], iframe[src]")
+                        .map { it.attr("src") }
+                        .filter { it.isNotEmpty() }
+                        .distinct()
+        if (iframes.isEmpty()) return false
 
-        runAllAsync(
-                {
-                    document.select("div#server ul li div").amap {
-                        val dataPost = it.attr("data-post")
-                        val dataNume = it.attr("data-nume")
-                        val dataType = it.attr("data-type")
-
-                        val iframe =
-                            app.post(
-                                url = "$mainUrl/wp-admin/admin-ajax.php",
-                                data =
-                                    mapOf(
-                                        "action" to "player_ajax",
-                                        "post" to dataPost,
-                                        "nume" to dataNume,
-                                        "type" to dataType
-                                    ),
-                                referer = data,
-                                headers =
-                                    mapOf(
-                                        "X-Requested-With" to
-                                                "XMLHttpRequest"
-                                    )
-                            )
-                                .document
-                                .select("iframe")
-                                .attr("src")
-
-                        loadExtractor(fixUrl(iframe), "$mainUrl/", subtitleCallback, callback)
-                    }
-                },
-                {
-                    document.select("div#download tr").amap { el ->
-                        el.select("a").amap {
-                            loadFixedExtractor(
-                                fixUrl(it.attr("href")),
-                                el.select("strong").text(),
-                                "$mainUrl/",
-                                subtitleCallback,
-                                callback
-                            )
-                        }
-                    }
-                }
-            )
-
-        return true
-    }
-
-    private suspend fun loadFixedExtractor(
-            url: String,
-            name: String,
-            referer: String? = null,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
-    ) = coroutineScope {
-        loadExtractor(url, referer, subtitleCallback) { link ->
-			launch(Dispatchers.IO) {
-				callback.invoke(
-					newExtractorLink(
-						link.name,
-						link.name,
-						link.url,						
-						link.type
-					){
-						this.referer = link.referer
-						this.quality = name.fixQuality()
-						this.headers = link.headers
-						this.extractorData = link.extractorData
-					}
-				)
-			}
-		}
-    }        
-
-    private fun String.fixQuality(): Int {
-        return when (this) {
-            "MP4HD" -> Qualities.P720.value
-            "FULLHD" -> Qualities.P1080.value
-            else -> Regex("(\\d{3,4})p").find(this)?.groupValues?.get(1)?.toIntOrNull()
-                            ?: Qualities.Unknown.value
+        var found = 0
+        val collect: (ExtractorLink) -> Unit = { link ->
+            found++
+            callback(link)
         }
+        for (iframe in iframes) {
+            // referer = URL halaman episode (bukan root situs): sebagian
+            // embedder (blogger, dll) memvalidasi referer ini.
+            loadExtractor(fixUrl(iframe), data, subtitleCallback, collect)
+        }
+        return found > 0
     }
 }

@@ -3,11 +3,13 @@ package com.oploverz
 import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.fixUrl
@@ -171,9 +173,133 @@ class Shorticu : StreamWishExtractor() {
     override val mainUrl = "https://shorticu.com"
 }
 
+/**
+ * UpBolt (https://upbolt.to/e/<code>).
+ *
+ * Format BARU: halaman embed tidak lagi memuat link stream langsung, tapi
+ * form POST ke /dl:
+ *   op=embed&file_code=<code>&auto=1&referer=<referer>
+ * Balasan HTML-nya memuat:
+ *   - master.m3u8  (HLS, token t/s/e di query)
+ *   - <code>_sli.vtt (subtitle)
+ *   - <title> berisi kualitas, mis. "OPLOVERZ PLUS - BLC 415 [mp4 480p]"
+ *
+ * Ekstraktor StreamWish bawaan tidak bisa menangani format ini, jadi
+ * ditImplementasikan manual; kalau gagal, jatuh ke logika StreamWish lama.
+ */
 class UpBolt : StreamWishExtractor() {
     override var name = "UpBolt"
     override val mainUrl = "https://upbolt.to"
+    override val requiresReferer = true
+
+    private fun qualityOf(q: Int): Int =
+            when (q) {
+                1080 -> Qualities.P1080.value
+                720 -> Qualities.P720.value
+                480 -> Qualities.P480.value
+                360 -> Qualities.P360.value
+                else -> Qualities.Unknown.value
+            }
+
+    override suspend fun getUrl(
+            url: String,
+            referer: String?,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
+    ) {
+        val code = url.substringAfterLast("/").substringBefore("?")
+        var resolved = false
+        try {
+            val res =
+                    app.post(
+                            url = "$mainUrl/dl",
+                            data =
+                                    mapOf(
+                                            "op" to "embed",
+                                            "file_code" to code,
+                                            "auto" to "1",
+                                            "referer" to (referer ?: "$mainUrl/")
+                                    ),
+                            referer = referer,
+                            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+                    )
+            val html = res.text
+            val m3u8 =
+                    Regex("""["'](https?://[^"'\s]+?\.m3u8[^"'\s]*)["']""")
+                            .find(html)?.groupValues?.get(1)
+            if (!m3u8.isNullOrBlank()) {
+                Regex("""["'](https?://[^"'\s]+?\.vtt)["']""")
+                        .find(html)?.groupValues?.get(1)
+                        ?.let { subtitleCallback(SubtitleFile(it, "Indonesia")) }
+                val title =
+                        Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
+                                .find(html)?.groupValues?.get(1)?.trim()
+                val q =
+                        Regex("""\[mp4 (\d{3,4})p\]""")
+                                .find(title ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                callback(
+                        newExtractorLink(
+                                title?.ifBlank { null } ?: "UpBolt",
+                                "UpBolt",
+                                m3u8,
+                                ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = "$mainUrl/"
+                            this.quality = q?.let { qualityOf(it) } ?: Qualities.Unknown.value
+                        })
+                resolved = true
+            }
+        } catch (e: Throwable) {
+            // fallback ke StreamWish di bawah
+        }
+        if (!resolved) super.getUrl(url, referer, subtitleCallback, callback)
+    }
+}
+
+
+/**
+ * Blogger (https://www.blogger.com/video.g?token=...).
+ *
+ * Halaman Blogger membungkus URL video GoogleVideo dengan escape unicode
+ * (\u003d "=" dan \u0026 "&"), jadi pola searching harus di-decode dulu.
+ * Extractor bawaan SDK tidak menangani escape itu -> link kosong.
+ */
+class Blogger : ExtractorApi() {
+    override val name = "Blogger"
+    override val mainUrl = "https://www.blogger.com"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(
+            url: String,
+            referer: String?,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
+    ) {
+        val html = app.get(url).text
+        val raw =
+                Regex("""https://[^"&]*googlevideo\.com/videoplayback[^"&]*""")
+                        .find(html)?.groupValues?.get(0) ?: return
+        val videoUrl =
+                raw.replace("\\u003d", "=")
+                        .replace("\\u0026", "&")
+                        .replace("\\u0026amp;", "&")
+                        .replace("\\/", "/")
+        if (videoUrl.isBlank()) return
+        val itag =
+                Regex("""itag(?:\\u003d|=)(\d+)""")
+                        .find(raw)?.groupValues?.get(1)?.toIntOrNull()
+        val quality =
+                when (itag) {
+                    37, 136, 137, 271 -> Qualities.P1080.value
+                    22, 136 -> Qualities.P720.value
+                    18 -> Qualities.P360.value
+                    else -> Qualities.Unknown.value
+                }
+        callback(
+                newExtractorLink("Blogger", "Blogger", videoUrl, ExtractorLinkType.VIDEO) {
+                    this.quality = quality
+                })
+    }
 }
 
 // =====================================================================
