@@ -349,29 +349,42 @@ class Blogger : ExtractorApi() {
             callback: (ExtractorLink) -> Unit
     ) {
         val html = app.get(url, headers = mapOf("User-Agent" to BROWSER_UA)).text
+        // KUNCI FIX 403/400: halaman Blogger membungkus URL GoogleVideo dengan
+        // escape (\u003d "=", \u0026 "&", \u0022 '"'), TAPI TIDAK KONSISTEN -
+        // kadang ter-escape, kadang sudah mentah dengan '&' asli. Pola lama
+        // ([^"&]*) berhenti di '&' PERTAMA: kalau URL-nya belum di-escape,
+        // semua parameter SETELAH '&' pertama (signature, mime, expire)
+        // hilang -> googlevideo membalas 403/400 (link "flaky").
+        // Jadi decode SEMUA escape dulu, baru scan URL utuh sampai delimiter
+        // kutip/whitespace.
+        val decoded =
+                html.replace("\\u003d", "=")
+                        .replace("\\u0026", "&")
+                        .replace("\\u0022", "\"")
+                        .replace("\\/", "/")
+                        .replace("&quot;", "\"")
+                        .replace("&amp;", "&")
         // Halaman Blogger memuat satu URL GoogleVideo per itag (18=360p,
         // 22=720p, 37=1080p, ...). Semua varian dikembalikan supaya aplikasi
         // bisa memilih track video resolusi tertinggi yang tersedia.
         val raws =
-                Regex("""https://[^"&]*googlevideo\.com/videoplayback[^"&]*""")
-                        .findAll(html)
+                Regex("""https?://[^"'\s\\<>]+googlevideo\.com/videoplayback[^"'\s\\<>]*""")
+                        .findAll(decoded)
                         .map { it.groupValues.get(0) }
                         .toList()
         if (raws.isEmpty()) return
         val byItag = LinkedHashMap<Int, String>()
         for (raw in raws) {
+            // Setelah di-decode, marker itag sudah bentuk asli: "itag=<n>".
             val itag =
-                    Regex("""itag(?:\\u003d|=)(\d+)""")
+                    Regex("""[?&]itag=(\d+)""")
                             .find(raw)?.groupValues?.get(1)?.toIntOrNull() ?: continue
             if (!byItag.containsKey(itag)) byItag[itag] = raw
         }
         if (byItag.isEmpty()) return
         for ((itag, raw) in byItag) {
-            val videoUrl =
-                    raw.replace("\\u003d", "=")
-                            .replace("\\u0026", "&")
-                            .replace("\\u0026amp;", "&")
-                            .replace("\\/", "/")
+            // raw sudah URL yang ter-decode penuh (tidak perlu ganti ulang).
+            val videoUrl = raw
             if (videoUrl.isBlank()) continue
             val quality =
                     when (itag) {

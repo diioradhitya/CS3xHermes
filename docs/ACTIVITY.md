@@ -7,6 +7,71 @@ Format satu entri per batch kerja, terbaru di atas.
 
 ---
 
+## 2026-10-23 — Oploverz v13: fix root-cause Blogger 403/400, validasi paralel, validator Mega.nz
+
+### 1. Root-cause link Blogger "flaky" (403/400) — URL terpotong di '&'
+
+Extractor Blogger lama scan URL GoogleVideo dengan pola `[^"&]*`, lalu decode
+`\u0026` per-link. Masalahnya: halaman video.g Blogger TIDAK konsisten — kadang
+URL ter-escape (`\u0026`), kadang terbalas mentah dengan `&` asli / `&amp;`.
+Kalau mentah, regex berhenti di `&` PERTAMA sehingga semua parameter setelahnya
+(signature, mime, expire) hilang → googlevideo membalas 403/400. Inilah kenapa
+link Blogger "kadang jalan kadang mati": tergantung bentuk escape halaman itu.
+
+Fix (`Extractors.kt`, `Blogger.getUrl`): **decode SEMUA escape terlebih dahulu**
+(`\u003d`, `\u0026`, `\u0022`, `\/`, `&quot;`, `&amp;`), baru scan URL utuh
+dengan pola `[^"'\s\\<>]+`. URL kini selalu sampai `"` penutup, lengkap semua
+parameternya, untuk SEMUA variasi halaman.
+
+### 2. Validasi link paralel (was: berurutan ~N x round-trip)
+
+`loadLinks` dulu memeriksa 1 HEAD/GET-Range per link BERURUTAN (link Blogger ~3
+itag + UpBolt + fallback → bisa >5 detik di box Android sebelum daftar sumber
+muncul). Sekarang semua pemeriksaan (`isMediaLinkAlive` + validator Mega) jalan
+`async { } / awaitAll()` dalam satu `coroutineScope` (Oploverz.kt s.3).
+
+Fix tambahan `isMediaLinkAlive` (Http.kt):
+- retry 2x dengan jeda 300 ms (googlevideo kadang balas 403 sementara saat
+  throttle entry) sebelum menyatakan link mati,
+- HTTP 416 ikut dianggap hidup (server tahu file-nya; range yang diminta cuma
+  1 KB),
+- timeout 10 s eksplisit.
+
+### 3. Validator Mega.nz (kurangi Error 3003 dari entry mati)
+
+Mega.nz **tidak bisa diputar native** CloudStream (file di-serve terenkripsi
+AES-CBC, dekrip di client) — status itu tidak berubah. Yang dibuang:
+setiap gelar episode Samehadaku memasukkan link Mega TANPA cek filenya masih
+ada, jadi file yang sudah dihapus/dinonaktifkan tetap muncul dan pasti Error
+3003 saat dipilih.
+
+Module baru `Mega.kt`:
+- `fileHandle()` — parse handle dari format `/embed/<h>#<key>`,
+  `/embed/<h>!<key>`, `/file/<h>#...`, `/#!<h>!<key>`.
+- `isFileAlive()` — 1 POST ke `g.api.mega.co.nz/cs` dengan body
+  `[{"a":"g","p":<handle>}]` (NiceHttp `json = listOf(mapOf(...))`, `data=null`
+  — di NiceHttp map `data` menimpa `json`). Balasan objek (`{"g":...}`) =
+  hidup; kode negatif `[-9]`/`[-11]` = mati → entry dibuang.
+- Kalau API tidak bisa dihubungi → anggap hidup (perilaku lama), jangan buang
+  link yang mungkin valid.
+
+Fungsi: mega links yang masih hidup tetap di urutan terakhir (untuk copy link
+ke downloader/aplikasi Mega), yang mati hilang dari daftar.
+
+### 4. Lain-lain
+
+- `OploverzProvider/build.gradle.kts`: `version 12 → 13`, description
+  diperbarui (tidak lagi menyebut backapi.oploverz.ac yang sudah mati).
+- Verifikasi: BELUM dijalankan di harness/box Android (server dibawah
+  diora-nawa punya harness `/root/opl-verify`); build & publish artefak
+  (`.cs3` + plugins.json pin tag) dilakukan oleh release.sh di server.
+- CATATAN: di workflow server, `Extractors.kt` disuntik dari
+  `shared-extractors/Extractors.kt` master (`/DATA/csbuild/repo`) oleh
+  release.sh — suntingan Blogger di sini HARUS dicerminkan ke master shared
+  extractors, kalau tidak akan ditimpa saat release berikutnya.
+
+---
+
 ## 2026-10-22 (malam) — Oploverz pindah ke domain baru (oploverz.am/.ch/.site)
 
 ### Gejala

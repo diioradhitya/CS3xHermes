@@ -5,6 +5,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -265,8 +267,9 @@ class Oploverz : MainAPI() {
         val doc = fetchDoc(data, "iframe")
 
         // Link dikumpulkan dulu, baru dikirim ke callback terurut: link yang
-        // bisa diputar (Blogger/UpBolt) lebih dulu, link Mega (butuh
-        // extractor mega.nz yang tidak ada di CloudStream) di akhir.
+        // bisa diputar (Blogger/UpBolt) lebih dulu, link Mega (terenkripsi,
+        // tidak bisa diputar CloudStream) di akhir - dan hanya yang masih
+        // ada filenya (lihat Mega.isFileAlive di bawah).
         val links = mutableListOf<ExtractorLink>()
 
         // 1) SUMBER UTAMA: samehadaku.how
@@ -333,20 +336,42 @@ class Oploverz : MainAPI() {
 
         if (links.isEmpty()) return false
 
-        // 3) Validasi link media: beberapa embedder/blogger balas 403/400
-        //    (video sudah mati / diblokir). Link seperti itu dibuang supaya
-        //    sumber pertama yangOffer app benar-benar bisa diputar.
+        // 3) Validasi link media SECARA PARALEL (GET Range 1 KB):
+        //    - Blogger/UpBolt kadang balas 403/400 (video mati / dioff sesaat).
+        //      Link yang mati dibuang dari baris awal daftar supaya sumber
+        //      pertama yang ditawarkan app benar-benar bisa diputar.
+        //    - Mega.nz dites lewat API mega (lihat Mega.isFileAlive): entry
+        //      yang filenya sudah dihapus / inaktif TIDAK ditambahkan lagi,
+        //      jadi tidak memicu Error 3003 saat dipilih user. (File Mega
+        //      yang masih hidup tetap dikeluarkan di urutan terakhir untuk
+        //      keperluan copy manual ke downloader/aplikasi Mega.)
+        //    Semua pemeriksaan jalan bersamaan (dulu berurutan: 1 HEAD per
+        //    link, bisa >5 detik di box Android sebelum daftar muncul).
         val playable = links.filter { !it.url.contains("mega.nz", ignoreCase = true) }
         val mega = links.filter { it.url.contains("mega.nz", ignoreCase = true) }
-        val alive = mutableListOf<ExtractorLink>()
-        val dead = mutableListOf<ExtractorLink>()
-        for (l in playable.sortedByDescending { it.quality }) {
-            if (isMediaLinkAlive(l.url, l.referer)) alive.add(l) else dead.add(l)
-        }
+
+        val (alive, dead, megaAlive) =
+                coroutineScope {
+                    val checkPlayable =
+                            playable.sortedByDescending { it.quality }.map { l ->
+                                async { l to isMediaLinkAlive(l.url, l.referer) }
+                            }
+                    val checkMega =
+                            mega.sortedByDescending { it.quality }.map { l ->
+                                async { l to Mega.isFileAlive(l.url) }
+                            }
+                    val pl = checkPlayable.awaitAll()
+                    val ml = checkMega.awaitAll()
+                    Triple(
+                            pl.filter { it.second }.map { it.first },
+                            pl.filterNot { it.second }.map { it.first },
+                            ml.filter { it.second }.map { it.first })
+                }
+
         // Urutan: link hidup (kualitas tertinggi) -> link yang gagal
         // divalidasi (fallback, mis. video Blogger yang keburu diblokir
-        // sesaat) -> Mega (butuh extractor mega.nz, tidak ada di CloudStream).
-        for (l in (alive + dead + mega.sortedByDescending { it.quality })) {
+        // sesaat) -> Mega yang terverifikasi masih hidup.
+        for (l in alive + dead + megaAlive) {
             callback(l)
         }
         return true

@@ -1,7 +1,7 @@
-version = 12
+version = 13
 
 cloudstream {
-    description = "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)"
+    description = "OploverzxHermes - Anime Sub Indo. Sumber: oploverz.am/.ch + mirror samehadaku.how, via extractor Blogger/UpBolt + validator Mega.nz."
     language = "id"
     authors = listOf("Dio R")
     status = 1
