@@ -1,0 +1,41 @@
+# Build artifacts
+build/
+.gradle/
+.kotlin/
+*.iml
+# IMPORTANT: builds/ is NOT build/ -- it holds the released .cs3 artifacts
+# (113 tracked files). Do not "simplify" build/ into build, it would wipe
+# every release from the repo.
+!builds/
+
+# Build logs (regenerated on every gradle run)
+*.log
+
+# Release-API scratch snapshots (live-*.json, generated for comparison only)
+live-plugins.json
+live-buildsbranch-plugins.json
+
+# Native / profiling output
+.externalNativeBuild/
+.cxx/
+*.hprof
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+
+# Local config (SDK path bervariasi per machine)
+local.properties
+
+# Secrets (jangan hardcode token di repo!)
+*.token
+*.key
+*.secret
+
+# OS
+Thumbs.db
+
+# Python tooling (replay harness)
+tools/__pycache__/
+*.pyc
