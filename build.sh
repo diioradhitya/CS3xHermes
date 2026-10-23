@@ -64,7 +64,7 @@ cp build/plugins.json builds/plugins.json
 # mengubah URL raw.githubusercontent.com menjadi
 #   https://cdn.jsdelivr.net/gh/<repo>@<ref>/...
 # dan jsDelivr meng-cache file GitHub dengan s-maxage=43200 (12 JAM).
-# File yang kontennya berubah di URL yang sama akanPresentation basi ->
+# File yang kontennya berubah di URL yang sama akan diserve basi ->
 # manifest lama + hash lama + file baru = hash mismatch = INSTALL GAGAL.
 # Dengan URL yang dipin ke TAG, isi file tidak pernah berubah, jadi cache
 # jsDelivr selalu benar dan hash selalu cocok.
