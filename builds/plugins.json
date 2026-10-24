@@ -311,7 +311,7 @@
         ],
         "version": 2,
         "internalName": "Pencurimovie",
-        "description": "Pencurimovie — Streaming Film & Serial",
+        "description": "Pencurimovie \u2014 Streaming Film & Serial",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Pencurimovie.cs3",
         "name": "Pencurimovie"
     },
@@ -442,7 +442,7 @@
         "name": "MovieboxProvider"
     },
     {
-        "fileHash": "sha256-5b5ecc63fe90ef30d62f9402a17db5a77b40f5cb01283ab8ecd6f611e3f135a5",
+        "fileHash": "sha256-8571b718eb57441cedda4981aa33fa307d020b52897edb001e6753f618f7fb7f",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 29131,
