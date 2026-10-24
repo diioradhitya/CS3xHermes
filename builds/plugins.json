@@ -311,7 +311,7 @@
         ],
         "version": 2,
         "internalName": "Pencurimovie",
-        "description": "Pencurimovie \u2014 Streaming Film & Serial",
+        "description": "Pencurimovie — Streaming Film & Serial",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Pencurimovie.cs3",
         "name": "Pencurimovie"
     },
@@ -438,7 +438,7 @@
         "version": 1,
         "internalName": "MovieboxProvider",
         "description": "MovieBox - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/MovieboxProvider.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261024-2150/builds/MovieboxProvider.cs3",
         "name": "MovieboxProvider"
     },
     {
@@ -459,7 +459,7 @@
         "version": 1,
         "internalName": "Moviebox",
         "description": "MovieBox - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Moviebox/MovieboxProvider.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261024-2150/builds/Moviebox/MovieboxProvider.cs3",
         "name": "Moviebox"
     }
 ]
