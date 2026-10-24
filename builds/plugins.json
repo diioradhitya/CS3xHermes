@@ -419,5 +419,47 @@
         "description": "WGFilm21 - Streaming Movie Sub Indo",
         "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/WGFilm21.cs3",
         "name": "WGFilm21"
+    },
+    {
+        "fileHash": "sha256-5b5ecc63fe90ef30d62f9402a17db5a77b40f5cb01283ab8ecd6f611e3f135a5",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 29131,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "MovieBox Team"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "AsianDrama"
+        ],
+        "version": 1,
+        "internalName": "MovieboxProvider",
+        "description": "MovieBox - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/MovieboxProvider.cs3",
+        "name": "MovieboxProvider"
+    },
+    {
+        "fileHash": "sha256-5b5ecc63fe90ef30d62f9402a17db5a77b40f5cb01283ab8ecd6f611e3f135a5",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 29131,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "MovieBox Team"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "AsianDrama"
+        ],
+        "version": 1,
+        "internalName": "Moviebox",
+        "description": "MovieBox - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/Moviebox/MovieboxProvider.cs3",
+        "name": "Moviebox"
     }
 ]

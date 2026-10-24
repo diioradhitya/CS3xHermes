@@ -4,6 +4,6 @@
   "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=128",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/plugins.json"
-  ]
+      "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/builds/plugins.json"
+    ]
 }
