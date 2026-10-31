@@ -7,6 +7,94 @@ Format satu entri per batch kerja, terbaru di atas.
 
 ---
 
+## 2026-10-23 (siang) — Oploverz v14: SUMBER UTAMA pindah ke v2.samehadaku.how
+
+### Situs oploverz.am migrasi lagi (9-10 AM)
+
+Diagnosis pagi ini (curl dari server diora-nawa):
+- Listing `/anime/?status=&type=&order=update` yang semalam masih hidup → **404**
+  (link nav homepage sendiri tetap menunjuk URL itu: situs sedang rusak).
+- Permalink halaman series massal rusak: `/anime/bleach/` **404**
+  (padahal link-nya ada di nav), `/anime/ao-ashi-s2/` **301 ke post episode**
+  (slug lama), `/anime/naruto-kecil-movie-3/` 301 → slug panjang → 404 juga.
+- Pencarian `/?s=` balas 200 tapi berisi 10 `<article>` skeleton tanpa link
+  (hasil dirender JS).
+- `wp-json/` masih hidup dan `"name"` sekarang **"oploverz.best | Situs
+  Oploverz yang asli"** → mereka mengganti identitas domain ke `.best`;
+  TLS ke `oploverz.best` dari server gagal semua (curl 000, Broken pipe).
+- Kesimpulan: situs sedang MIGRASI BESAR; plugin tidak bisa mengandalkan
+  oploverz untuk browse.
+- Bonus masalah: Cloudflare mulai mematikan handshake TLS okhttp/JVM
+  (SSLHandshakeException "Remote host terminated the handshake") secara
+  intermittent — curl dari IP sama tetap 200.
+
+### Keputusan: primary source = v2.samehadaku.how (perinta user)
+
+Plugin browse-seluruhnya (home/search/load) sekarang dari samehadaku;
+Oploverz tetap dipakai **hanya sebagai fallback video** di loadLinks
+(post episode `/slug-episode-N-subtitle-indonesia/` masih hidup).
+
+Struktur new theme samehadaku (Tailwind, BUKAN Madara — classes
+eplister/bs/bixbox tidak ada):
+- Listing kartu: `div.thumb > a[href=post-episode]` (poster) + `div.dtla >
+  h2.entry-title > a[href=/anime/<slug>/]` — halaman series langsung,
+  tidak perlu lagi strip-slug episode.
+- Listing path: `/anime-terbaru/` (+ `/page/N/`), root `/` (+ `/page/N/`)
+  (CATATAN: `/page/1/` kosong — pakai path dasar untuk halaman 1).
+- Search: `/?s=<q>` → `article.animepost` (kartu ke post episode; slug
+  episode = slug series → normalisasi ke `/anime/<slug>/`), halaman 2 via
+  `/page/N/?s=<q>`. Ditambah tebakan slug langsung `/anime/<query>/`
+  (result paling relevan muncul duluan).
+- Halaman series: `h1[itemprop=headline]` ("<Judul> Sub Indo"), info rows
+  `div.flex.justify-between` (label `span.w-28`, ambil Type/Status),
+  sinopsis `div.entry-content p`, poster img di kartu detail, genre
+  `a[href*=/genre/]`, baris episode `<a href="<host>/<slug>-episode-N/">`
+  disaring prefix slug series (widget episode anime lain di sidebar
+  bisa ikut kalau tidak disaring), rekomendasi dari widget `a.series`.
+- Baris episode link nomor & link judul menunjuk URL sama → dedupe per URL.
+- Bug parse: jsoup `substringAfterLast('/')` pada href ber-trailing-slash
+  menghasilkan string kosong → pakai `removeSuffix("/")` dulu.
+- Film samehadaku: sebagian halaman film TIDAK punya baris episode
+  (gintama-movie-3) = tidak ada player; yang punya (dragon-ball-super-beerus)
+  serangannya lewat `MovieLoadResponse.dataUrl` = post episode.
+
+### loadLinks (sumber video)
+
+- data = URL episode samehadaku → **langsung** `Samehadaku.episodeServers()`
+  (tidak ada lagi mapping judul+episode antar situs):
+  server Blogspot (blogger.com multi-itag 360p/720p/1080p via extractor
+  Blogger) + Mega 480p/720p/1080p/4K (validator `Mega.isFileAlive`).
+- Fallback tetap: kalau data oploverz ATAU server samehadaku kosong →
+  parse post episode oploverz (`/slug-episode-N-subtitle-indonesia/`)
+  → mapping samehadaku lama (guess/resolution) + iframe embedder bawaan
+  (upbolt/blogger/filedon) dengan host failover lama.
+- Validasi link masih paralel (v13): hidup ≥ gugur, Mega hidup terakhir.
+
+### Verifikasi (harness `/root/opl-verify`, run26.log)
+
+**35 PASS / 0 FAIL** — semua skenario hijau:
+- Main page 2 tab (Terbaru 14, Terpopuler 16) semua menunjuk `/anime/`,
+  judul bersih, poster 14/14; pagination overlap=0.
+- Search "naruto" → result `/anime/naruto/` + `/anime/naruto-kecil/`.
+- Load series (Hyouken S2): judul/plot/genre 22/rekomendasi 7/episode
+  1-2-3 terurut/poster.
+- loadLinks episode langsung samehadaku → Blogger 360p valid
+  (googlevideo, no escape); `[5a]` 5 server langsung (Blogspot + Mega
+  480/720/1080/4K); `[5a2]` film punya 5+ server termasuk Mega 1080p & 4K.
+- Fallback oploverz: BLOGGER → 2 link (720p+360p), UPBOLT → 1 link 480p,
+  urutan link hidup > mati tetap benar (`[5c]`).
+- UpBolt langsung: iframe + 1 link HLS 480p + 1 subtitle.
+
+### Lain-lain
+
+- `OploverzProvider/build.gradle.kts`: `version 13 → 14`, description
+  diperbarui (sumber utama samehadaku).
+- Verifikasi penuh di server (diora-nawa), bukan cuma lokal.
+- CATATAN: migrasi tema samehadaku ini sendiri baru-baru ini (v2.*);
+  kalau markup berubah lagi, pola markup di atas yang harus dicek dulu.
+
+---
+
 ## 2026-10-23 — Oploverz v13: fix root-cause Blogger 403/400, validasi paralel, validator Mega.nz
 
 ### 1. Root-cause link Blogger "flaky" (403/400) — URL terpotong di '&'

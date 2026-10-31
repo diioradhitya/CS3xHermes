@@ -155,26 +155,28 @@ internal object Samehadaku {
                     return emptyList()
                 }
         val out = mutableListOf<Server>()
-        // <div id="player-option-N" class="east_player_option ..." data-embed="&lt;iframe src=&quot;...&quot;&gt;">
+        // <div id="player-option-N" class="east_player_option ..." data-embed="<iframe src="...">">
         val tagRe = Regex("""<div[^>]*id="player-option-\d+"[^>]*>""", RegexOption.IGNORE_CASE)
         for (m in tagRe.findAll(html)) {
             val tag = m.groupValues[0]
             val embed =
                     Regex("""data-embed="([^"]*)"""").find(tag)?.groupValues?.get(1).orEmpty()
             if (embed.isBlank()) continue
-            // nilai atribut di-escape sebagai HTML entity: &lt;iframe src=&quot;...&quot;&gt;
+            // nilai atribut di-escape sebagai HTML entity: <iframe src="...">
+            // Juga ada numeric entity &#038; (= &) yang harus didecode.
             val embedHtml =
-                    embed.replace("&quot;", "\"")
+                    embed.replace(""", "\"")
                             .replace("&#039;", "'")
-                            .replace("&lt;", "<")
-                            .replace("&gt;", ">")
-                            .replace("&amp;", "&")
-            // data-embed berisi iframe HTML-escaped: &lt;iframe src=&quot;URL&quot;&gt;
+                            .replace("<", "<")
+                            .replace(">", ">")
+                            .replace("&", "&")
+                            .replace("&#038;", "&")
+            // data-embed berisi iframe HTML-escaped: <iframe src="URL">
             val src =
                     Regex("""src="([^"]+)"""").find(embedHtml)?.groupValues?.get(1)
                             ?: Regex("""src='([^']+)'""").find(embedHtml)?.groupValues?.get(1)
                             ?: continue
-            val url = src.trim().replace("&amp;", "&")
+            val url = src.trim().replace("&", "&")
             if (url.isEmpty()) continue
             // Label server = teks di dalam div (mis. "Mega 1080p").
             // Markup antar server bisa berbeda (span, span bersarang, atau
@@ -185,7 +187,7 @@ internal object Samehadaku {
                     inner.replace(Regex("""<[^>]*>"""), " ")
                             .replace("&nbsp;", " ")
                             .trim()
-                            .split(Regex("""\\s+"""))
+                            .split(Regex("""\s+"""))
                             .firstOrNull { it.isNotEmpty() }
                             .orEmpty()
                             .trim('"', '\'', ',', ';', ':')
