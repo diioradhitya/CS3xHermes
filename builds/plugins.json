@@ -274,26 +274,6 @@
     "name": "Nomat"
   },
   {
-    "fileHash": "sha256-H7QlAZU/q7LWZRPFiFV9BAtBMaHRbkuunQ58bPFEKdw",
-    "apiVersion": 1,
-    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 71110,
-    "status": 1,
-    "language": "id",
-    "authors": [
-      "Asm0d3usX"
-    ],
-    "tvTypes": [
-      "Anime"
-    ],
-    "version": 14,
-    "internalName": "OploverzProvider",
-    "description": "Oploverz - Anime Streaming",
-    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/OploverzProvider.cs3",
-    "name": "OploverzProvider",
-    "iconUrl": "https://www.google.com/s2/favicons?domain=oploverz.biz&sz=64"
-  },
-  {
     "fileHash": "sha256-SBmfkij6SGrHar3XBxjh9uUKcb5rlX/EAKX9oVxiFek",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
@@ -439,5 +419,27 @@
     "description": "MovieBox - Streaming Movie and TV Series",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Moviebox/MovieboxProvider.cs3",
     "name": "Moviebox"
+  },
+  {
+    "fileHash": "sha256-fb515ef55ebaedde3ddaeb68ee738dffc428cbc7ce0098f66f7163499c429caf",
+    "apiVersion": 1,
+    "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+    "fileSize": 59782,
+    "status": 1,
+    "language": "id",
+    "authors": [
+      "Dio R"
+    ],
+    "tvTypes": [
+      "Anime",
+      "AsianDrama",
+      "Movie",
+      "TvSeries"
+    ],
+    "version": 16,
+    "internalName": "SamehadakuProvider",
+    "description": "SamehadakuxHermes - Anime Sub Indo. Sumber utama: v2.samehadaku.how (Top 10 / Latest Episode / Terbaru tabs, Blogger multi-itag + Mega 480-4K, validator link hidup); fallback video: oploverz.am/.ch.",
+    "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/master/builds/SamehadakuProvider.cs3",
+    "name": "SamehadakuProvider"
   }
 ]
