@@ -421,10 +421,10 @@
     "name": "Moviebox"
   },
   {
-    "fileHash": "sha256-fb515ef55ebaedde3ddaeb68ee738dffc428cbc7ce0098f66f7163499c429caf",
+    "fileHash": "sha256-17aff3de5fc8a397228193fde1fd11c599bf468354a39ad9ffc5a3a8e7c3b427",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 59782,
+    "fileSize": 48144,
     "status": 1,
     "language": "id",
     "authors": [
