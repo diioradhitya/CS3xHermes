@@ -1,4 +1,4 @@
-package com.oploverz
+package com.samehadaku
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -14,7 +14,7 @@ import com.lagradost.cloudstream3.utils.*
  * Modul ini memetakan episode Oploverz ke episode Samehadaku berdasarkan
  * judul anime + nomor episode, lalu mengembalikan daftar server yang tersedia.
  */
-internal object Samehadaku {
+internal object SamehadakuParser {
     const val BASE = "https://v2.samehadaku.how"
 
     data class Server(
@@ -165,11 +165,11 @@ internal object Samehadaku {
             // nilai atribut di-escape sebagai HTML entity: <iframe src="...">
             // Juga ada numeric entity &#038; (= &) yang harus didecode.
             val embedHtml =
-                    embed.replace(""", "\"")
+                    embed.replace("&quot;", "\"")
                             .replace("&#039;", "'")
-                            .replace("<", "<")
-                            .replace(">", ">")
-                            .replace("&", "&")
+                            .replace("&lt;", "<")
+                            .replace("&gt;", ">")
+                            .replace("&amp;", "&")
                             .replace("&#038;", "&")
             // data-embed berisi iframe HTML-escaped: <iframe src="URL">
             val src =

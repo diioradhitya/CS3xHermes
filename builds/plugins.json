@@ -289,11 +289,11 @@
             "Movie",
             "TvSeries"
         ],
-        "version": 12,
-        "internalName": "OploverzProvider",
-        "description": "OploverzxHermes - Anime Sub Indo streaming via backapi.oploverz.ac (upbolt.to extractor)",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261022-2055/builds/OploverzProvider.cs3",
-        "name": "OploverzProvider"
+        "version": 16,
+        "internalName": "SamehadakuProvider",
+        "description": "SamehadakuxHermes - Anime Sub Indo. Sumber utama: v2.samehadaku.how (Top 10 / Latest Episode / Terbaru tabs, Blogger multi-itag + Mega 480-4K, validator link hidup); fallback video: oploverz.am/.ch.",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/SamehadakuProvider.cs3",
+        "name": "SamehadakuProvider"
     },
     {
         "fileHash": "sha256-48199f9228fa486ac76abdd70718e1f6e50a71be6b957fc400a5fda15c6215e9",

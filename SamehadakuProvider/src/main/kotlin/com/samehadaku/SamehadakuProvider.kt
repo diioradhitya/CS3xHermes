@@ -1,4 +1,4 @@
-package com.oploverz
+package com.samehadaku
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
@@ -41,10 +41,10 @@ import org.jsoup.nodes.Element
  *                   dataUrl null-able via MovieLoadResponse url fallback.
  * - episode       : div#player-option-N data-embed="&lt;iframe src=&quot;...&quot;&gt;"
  *                   server Blogspot (blogger.com, multi itag) + Mega
- *                   480p/720p/1080p/4K - diparse oleh Samehadaku.
+ *                   480p/720p/1080p/4K - diparse oleh SamehadakuParser.
  */
-class Oploverz : MainAPI() {
-    override var name = "Oploverz"
+class SamehadakuProvider : MainAPI() {
+    override var name = "Samehadaku"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
@@ -196,11 +196,10 @@ class Oploverz : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val base = request.data
         val (path, parser) = when (base) {
-            "top10" -> "/${if (page > 1) "page/$page/" else ""}" to Document::top10Results
-            "latest" -> "/${if (page > 1) "page/$page/" else ""}" to Document::latestResults
+            "top10" -> "/${if (page > 1) "page/$page/" else ""}" to { doc: Document -> doc.top10Results() }
+            "latest" -> "/${if (page > 1) "page/$page/" else ""}" to { doc: Document -> doc.latestResults() }
             else -> // anime-terbaru
-                    (if (page > 1) "/anime-terbaru/page/$page/" else "/anime-terbaru/")
-                            to Document::homeResults
+                    (if (page > 1) "/anime-terbaru/page/$page/" else "/anime-terbaru/") to { doc: Document -> doc.homeResults() }
         }
         val doc = samehDoc(path, "entry-title")
         val results = parser(doc)
@@ -431,11 +430,11 @@ class Oploverz : MainAPI() {
             //    ke post episode sama - tidak perlu mapping judul lagi).
             //    Server: "Blogspot" (blogger.com, 360p/720p/1080p) + "Mega
             //    480p/720p/1080p/4K" (mega.nz/embed/...).
-            for (server in Samehadaku.episodeServers(data)) {
+            for (server in SamehadakuParser.episodeServers(data)) {
                 if (server.embedUrl.contains("blogger.com", ignoreCase = true)) {
                     // Extractor Blogger custom: mengambil SEMUA itag
                     // (360p/720p/1080p) jadi link terpisah.
-                    Blogger().getUrl(server.embedUrl, server.referer, subtitleCallback) {
+                    Blogger().getUrl(server.embedUrl, server.referer) {
                         links.add(it)
                     }
                 } else {
@@ -475,20 +474,20 @@ class Oploverz : MainAPI() {
                 try {
                     val doc = oplDoc(targetUrl, "iframe")
                     // 2a) mapping episode samehadaku dari judul anime oploverz
-                    val parsed = Samehadaku.parseOploverzEpisode(doc, targetUrl)
+                    val parsed = SamehadakuParser.parseOploverzEpisode(doc, targetUrl)
                     if (parsed != null) {
                         val (animeTitle, episodeNumber) = parsed
                         // Batas waktu: jangan menahan UI app > ~20 detik.
                         val sameEpisode =
                                 withTimeout(20_000) {
-                                    Samehadaku.guessEpisode(targetUrl, episodeNumber)
-                                            ?: Samehadaku.resolveEpisode(animeTitle, episodeNumber)
+                                    SamehadakuParser.guessEpisode(targetUrl, episodeNumber)
+                                            ?: SamehadakuParser.resolveEpisode(animeTitle, episodeNumber)
                                 } ?: null
                         if (sameEpisode != null) {
-                            for (server in Samehadaku.episodeServers(sameEpisode)) {
+                            for (server in SamehadakuParser.episodeServers(sameEpisode)) {
                                 if (links.any { it.url == server.embedUrl }) continue
                                 if (server.embedUrl.contains("blogger.com", ignoreCase = true)) {
-                                    Blogger().getUrl(server.embedUrl, server.referer, subtitleCallback) {
+                                    Blogger().getUrl(server.embedUrl, server.referer) {
                                         links.add(it)
                                     }
                                 } else {
