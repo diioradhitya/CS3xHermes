@@ -85,15 +85,57 @@ class IdnMovieProvider : MainAPI() {
         null
     }
 
-    /** JSON POST. app.post() only accepts Map<String,String> form bodies — use OkHttp. */
-    private fun postJson(url: String, body: String, referer: String? = null): String? = try {
-        val b = Request.Builder().url(url)
-            .post(body.toRequestBody(jsonMedia))
-            .header("User-Agent", userAgent)
-        referer?.let { b.header("Referer", it) }
-        http.newCall(b.build()).execute().use { r -> r.body?.string() }
-    } catch (e: Exception) {
-        null
+    /**
+     * JSON POST. `app.post()` hanya menerima form body `Map<String,String>`, jadi
+     * harus lewat OkHttp.
+     *
+     * Ini retries 504 dari Cloudflare -- `POST /api/idx/play` di belakang Cloudflare
+     * sering membalas **504 setelah 60 detik** (upstream player lambat/flaky), lalu
+     * berhasil di percobaan berikutnya. Body 504 itu HTML Cloudflare, bukan JSON.
+     * [loadEmbedLinks] memakai ini supaya satu timeout tidak lagi berarti
+     * "No Links Found".
+     *
+     * Aturan retry:
+     * - 2xx + body diawali `{` -> terima;
+     * - 2xx tapi body non-JSON -> ulangi (kemungkinan halaman error);
+     * - 4xx -> **berhenti**, request memang salah dan mengulang tidak menolong
+     *   (mis. 422 "Body tidak valid" karena `data` dikirim sebagai objek);
+     * - 5xx / IOException -> ulangi dengan jeda yang makin panjang.
+     */
+    private fun postJsonRetry(
+        url: String,
+        body: String,
+        referer: String?,
+        attempts: Int = 3,
+    ): String? {
+        for (i in 0 until attempts) {
+            val b = Request.Builder().url(url)
+                .post(body.toRequestBody(jsonMedia))
+                .header("User-Agent", userAgent)
+            referer?.let { b.header("Referer", it) }
+            var code = 0
+            var text: String? = null
+            try {
+                http.newCall(b.build()).execute().use { r ->
+                    code = r.code
+                    text = r.body?.string()
+                }
+            } catch (e: Exception) {
+                code = 0
+                text = null
+            }
+            if (code in 200..299) {
+                val t = text ?: continue
+                // hanya JSON yang benar-benar "success" yang diteruskan
+                if (t.trimStart().startsWith("{")) return t
+                continue
+            }
+            // 5xx / 0 (timeout, IOException) = upstream, coba lagi.
+            // 4xx = request salah, stop.
+            if (code in 400..499) return null
+            if (i < attempts - 1) try { Thread.sleep(1500L * (i + 1)) } catch (e: Exception) {}
+        }
+        return null
     }
 
     private fun abs(u: String) = if (u.startsWith("http")) u else "$mainUrl$u"
@@ -230,15 +272,11 @@ class IdnMovieProvider : MainAPI() {
         null
     }
 
-    /** RSC meng-escape payload sampai dua lapis; kupas sampai berhenti. */
-    private fun unescapeDeep(value: String?): String? {
-        var out = value ?: return null
-        var rounds = 0
-        while (rounds++ < 3 && out.contains("\\\\")) {
-            out = decode(out) ?: break
-        }
-        return out
-    }
+    /**
+     * RSC meng-escape payload; [strAfter] sudah mengupas satu lapis lewat
+     * [decode] dan itulah jumlah lapis yang benar untuk `playData`. Kupas lagi
+     * hanya merusak -- lihat catatan di [loadEmbedLinks].
+     */
 
     /** Teks JSON (array/object) yang mulai tepat setelah [key]. */
     private fun balancedAfter(data: String?, key: String): String? {
@@ -362,15 +400,20 @@ class IdnMovieProvider : MainAPI() {
         val label: String,
         val path: String,
         val endpoint: String,
+        /** "sflix" = server punya gap halaman, jadi perlu lompat lebih jauh. */
+        val family: String = "",
     )
 
     private val genres = listOf(
         Genre("Anime", "/anime", "/api/anime/catalog?category=0&page={}"),
         Genre("Drama Korea", "/drama-korea", "/api/drakor/catalog?category=0&page={}"),
-        Genre("Drama Thailand", "/drama-thailand", "/api/sflix/catalog?category=14&page={}"),
-        Genre("Drama Indonesia", "/drama-indonesia", "/api/sflix/catalog?category=2&page={}"),
+        Genre("Drama Thailand", "/drama-thailand", "/api/sflix/catalog?category=14&page={}", "sflix"),
+        Genre("Drama Indonesia", "/drama-indonesia", "/api/sflix/catalog?category=2&page={}", "sflix"),
         Genre("Vivamax", "/vivamax", "/api/vivamax/new?page={}"),
     )
+
+    /** Jumlah item per halaman untuk navigasi SSR tanpa pagination server. */
+    private val SSR_PAGE_SIZE = 12
 
     /**
      * Kartu listing diparse dari RSC: setiap kartu diawali `{"id":"<slug>","title":"`.
@@ -428,6 +471,24 @@ class IdnMovieProvider : MainAPI() {
         else -> "$mainUrl/movie/$slug"
     }
 
+    /**
+     * `/movies` dan `/tv` tidak punya pagination di server sama sekali -- `?page=2`
+     * membalas byte-identik dengan page 1. Navigate ini SSR murni, jadi scroll yang
+     * memanggil getMainPage(page=2) akan menerima daftar yang sama persis dan
+     * mengulang konten tanpa henti.
+     *
+     * Karena tidak ada endpoint katalog untuk keduanya, satu-satunya cara memberi
+     * scroll yang benar adalah mengiris satu snapshot sendiri. [ssrPage] melakukan
+     * itu: ambil seluruh daftar sekali, potong 12 item per halaman, dan laporkan
+     * `hasNext=false` di halaman terakhir supaya SDK berhenti.
+     */
+    private fun ssrPage(all: List<Card>, page: Int): List<Card> {
+        if (page <= 1) return all.take(SSR_PAGE_SIZE)
+        val from = (page - 1) * SSR_PAGE_SIZE
+        if (from >= all.size) return emptyList()
+        return all.drop(from).take(SSR_PAGE_SIZE)
+    }
+
     private fun cardResponse(c: Card): SearchResponse =
         newMovieSearchResponse(c.title, pageUrl(c.slug, c.type), c.type) {
             this.posterUrl = c.poster
@@ -437,22 +498,56 @@ class IdnMovieProvider : MainAPI() {
     // ---------------------------------------------------------------- genres
 
     /**
+     * Kursor pagination per genre: berisi **halaman server terakhir yang benar-benar
+     * dipakai**. Tanpa kursor, pemetaan halaman app -> halaman server harus ditebak
+     * dan pasti mengulang konten saat ada gap.
+     *
+     * Kenapa kursor perlu: `/api/sflix/catalog` (Drama Indonesia + Drama Thailand)
+     * punya gap acak -- page=1 selalu kosong untuk category 2, page=4 kosong
+     * untuk category 2 maupun 14, lalu page=5/6 isi lagi. Dicek berulang kali,
+     * hasilnya konsisten, jadi ini perilaku server, bukan rate-limit. Kalau
+     * pemetaan stateless ("cari yang tidak kosong"), app page 1 dan app page 2
+     * sama-sama mendarat di server page 2 -> 100% duplikat.
+     *
+     * Dengan kursor, tiap panggilan app page mengambil halaman server yang
+     * **belum pernah dipakai**, lalu melompat beberapa halaman ke depan kalau yang
+     * diminta kebetulan jatuh di gap. Hasil: tidak ada halaman kosong yang tampil
+     * dan tidak ada konten yang berulang.
+     */
+    private val genreCursor = HashMap<String, Int>()
+
+    /**
      * Satu request per halaman genre: parse kartu + `hasMore` dari body yang
      * sama, jadi tidak ada probe kedua hanya untuk cek "ada halaman berikutnya".
-     * `hasNext` di [getMainPage] diteruskan apa adanya dari `hasMore`, jadi
-     * scroll berhenti sendiri di halaman terakhir tanpa state internal.
+     * `hasNext` di [getMainPage] diteruskan apa adanya dari `hasMore`.
      */
+    @Synchronized
     private fun catalogPage(g: Genre, page: Int): Pair<List<Card>, Boolean> {
-        val url = mainUrl + g.endpoint.replace("{}", page.toString())
-        val body = getText(url, "$mainUrl${g.path}")
-            ?: return Pair(emptyList<Card>(), false)
-        val root = try {
-            JSONObject(body)
-        } catch (e: Exception) {
-            return emptyList<Card>() to false
+        // Scroll mengulang dari page 1 setiap kali section dibuka ulang.
+        if (page <= 1) genreCursor[g.label] = 0
+        var candidate = (genreCursor[g.label] ?: 0) + 1
+        val maxTries = if (g.family == "sflix") 5 else 3
+
+        var root: JSONObject? = null
+        var arr: org.json.JSONArray? = null
+        var tries = 0
+        while (tries < maxTries) {
+            val url = mainUrl + g.endpoint.replace("{}", candidate.toString())
+            val body = getText(url, "$mainUrl${g.path}")
+            val parsed = try { body?.let { JSONObject(it) } } catch (e: Exception) { null }
+            val items = parsed?.optJSONArray("items")
+            if (items != null) {
+                root = parsed
+                arr = items
+                if (items.length() > 0) {
+                    genreCursor[g.label] = candidate
+                    break
+                }
+            }
+            candidate++
+            tries++
         }
-        val arr = root.optJSONArray("items")
-        if (arr == null) return emptyList<Card>() to false
+        if (root == null || arr == null) return emptyList<Card>() to false
         val out = ArrayList<Card>(arr.length())
         for (i in 0 until arr.length()) {
             val e = arr.optJSONObject(i) ?: continue
@@ -485,8 +580,17 @@ class IdnMovieProvider : MainAPI() {
      * Section homepage. Nama diambil dari heading yang benar-benar ada di root page
      * (`/`) — bukan diterka dari URL, karena hampir semua route kandidat 404 dengan
      * halaman shell ~9.5KB tanpa kartu. Semua section di bawah sudah diverifikasi
-     * punya kartu: Film Terbaru 72, Populer 36, Update 72, Papan Peringkat 36,
-     * Film Indonesia 15, Serial TV 5.
+     * punya kartu: Film Terbaru 36, Populer 36, Update Terbaru 36,
+     * Serial TV Terbaru 36, Papan Peringkat 36. Film Indonesia 0.
+     *
+     * CATATAN Film Indonesia: section ini benar-benar `{"title":"Film Indonesia","movies":[],"hrefBase":"/sfl"}`
+     * di payload RSC -- upstream SFL sedang mati, jadi kosongnya BUKAN bug parser.
+     * Verifikasi: /drama-indonesia di browser menampilkan "Katalog belum bisa dimuat".
+     *
+     * CATATAN nama heading harus PERSIS dengan yang dikirim server:
+     * "Update Terbaru" dan "Serial TV Terbaru" (bukan "Update"/"Serial TV") --
+     * memakai nama yang kepotong bikin span section sebelah jadi 78 byte dan nol
+     * kartu. Judul yang dipotong juga salah tampil di UI CloudStream.
      *
      * Section dibaca dari posisi heading di payload RSC, jadi kartu milik tiap
      * section diambil dari potongan payload sendiri — bukan dari /movies atau /tv.
@@ -496,8 +600,8 @@ class IdnMovieProvider : MainAPI() {
         "Film Terbaru",
         "Populer",
         "Film Indonesia",
-        "Serial TV",
-        "Update",
+        "Serial TV Terbaru",
+        "Update Terbaru",
         "Papan Peringkat",
     )
 
@@ -586,13 +690,35 @@ class IdnMovieProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items: List<SearchResponse> = when (request.name) {
-            "TV Series" -> listingCards("/tv", TvType.TvSeries).map {
-                newTvSeriesSearchResponse(it.title, pageUrl(it.slug, TvType.TvSeries), TvType.TvSeries) {
-                    this.posterUrl = it.poster
-                    this.year = it.year
-                }
+            // `/movies` dan `/tv` tidak punya pagination server sama sekali
+            // (`?page=2` membalas byte-identik dengan page 1), jadi daftar penuh
+            // diiris sendiri supaya scroll tidak pernah mengulang halaman 1.
+            // `hasNext` wajib eksplisit: `newHomePageResponse(name, list)` memakai
+            // default `list.isNotEmpty()`, yang membuat SDK meminta halaman 2
+            // selamanya -- itu akar duplikasi Movies yang dilaporkan.
+            "TV Series" -> {
+                val all = listingCards("/tv", TvType.TvSeries)
+                val slice = ssrPage(all, page)
+                return newHomePageResponse(
+                    request.name,
+                    slice.map {
+                        newTvSeriesSearchResponse(it.title, pageUrl(it.slug, TvType.TvSeries), TvType.TvSeries) {
+                            this.posterUrl = it.poster
+                            this.year = it.year
+                        }
+                    },
+                    page * SSR_PAGE_SIZE < all.size,
+                )
             }
-            "Movie" -> movieCards().map { cardResponse(it) }
+            "Movie" -> {
+                val all = movieCards()
+                val slice = ssrPage(all, page)
+                return newHomePageResponse(
+                    request.name,
+                    slice.map { cardResponse(it) },
+                    page * SSR_PAGE_SIZE < all.size,
+                )
+            }
             else -> {
                 // Genre lebih dulu: katalognya punya `hasMore` sendiri, jadi tidak
                 // boleh lewat parsing RSC homepage yang cuma menampilkan sekali.
@@ -606,7 +732,7 @@ class IdnMovieProvider : MainAPI() {
                         got.second,
                     )
                 }
-                val data = rsc(getText("$mainUrl/")) ?: return newHomePageResponse(request.name, emptyList())
+                val data = rsc(getText("$mainUrl/")) ?: return newHomePageResponse(request.name, emptyList(), false)
                 // urutkan semua heading, lalu tiap section mengambil rentang sampai
                 // heading berikutnya — ini yang membatasi "Film Terbaru" agar tidak
                 // menelan 72 kartu milik "Update".
@@ -622,7 +748,11 @@ class IdnMovieProvider : MainAPI() {
                 }
             }
         }
-        return newHomePageResponse(request.name, items)
+        // Section homepage SSR sudah menampilkan SELURUH kartunya dalam satu
+        // rentang heading, jadi tidak ada halaman berikutnya. Tanpa `false` eksplisit
+        // di sini, default SDK `list.isNotEmpty()` bikin scroll meminta page 2 lalu
+        // menerima rentang yang sama -> Film Indonesia (dan section lain) berulang.
+        return newHomePageResponse(request.name, items, false)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -850,19 +980,19 @@ class IdnMovieProvider : MainAPI() {
         val data = rsc(getText(idxUrl, "$mainUrl/")) ?: return false
 
         val playerId = strAfter(data, "playerId") ?: return false
-        // playData = JSON string yang isinya objek JSON; perlu dua lapis decode
-        val playData = strAfter(data, "playData")?.let { unescapeDeep(it) } ?: return false
-        val payload = try {
-            JSONObject(playData)
-        } catch (e: Exception) {
-            // masih ter-escape satu lapis
-            try { JSONObject(unescapeDeep(playData) ?: playData) } catch (e2: Exception) { return false }
-        }
-        if (payload.optString("id").isBlank()) return false
+        // playData: [strAfter] sudah meng-decode satu lapis lewat [decode], jadi
+        // hasilnya sudah JSON string yang utuh -- `{"id":"...","type":"episode"}`.
+        // Mendecode lagi (unescapeDeep) menghasilkan null/rusak, dan re-serialize
+        // objeknya mengubah urutan/format yang tidak selalu diterima endpoint.
+        // Kirim persis seperti yang diminta server: field `data` = JSON STRING.
+        val playData = strAfter(data, "playData") ?: return false
+        if (!playData.trimStart().startsWith("{") || !playData.contains("\"id\"")) return false
 
-        // WAJIB string: {"data": "<json string>"} — mengirim objek memberi 422
-        val body = JSONObject().put("data", payload.toString()).toString()
-        val txt = postJson("$EMBED/$playerId/api/idx/play", body, "$EMBED/") ?: return false
+        // 504 dari Cloudflare = upstream lambat, bukan request salah; [postJsonRetry]
+        // mengulang 3x sebelum menyerah, jadi satu timeout tidak lagi berarti
+        // "No Links Found".
+        val body = JSONObject().put("data", playData).toString()
+        val txt = postJsonRetry("$EMBED/$playerId/api/idx/play", body, idxUrl) ?: return false
         val res = try { JSONObject(txt) } catch (e: Exception) { return false }
         if (!res.optBoolean("success")) return false
 

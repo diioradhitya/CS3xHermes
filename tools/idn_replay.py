@@ -441,6 +441,12 @@ def probe_genre(label, path, tpl):
     has1 = bool(p1.get("hasMore"))
     print(f"   p1: items={len(items1)} hasMore={has1} keys={sorted(p1.keys())[:8]}")
     if not items1:
+        # SFL (Drama Indonesia/Thailand) memang selalu kosong di page=1. Itu
+        # BUKAN bug provider -- [catalogPage] memang lompat ke page 2+.
+        # Yang menentukan benar/tidaknya scroll adalah simulate_cursor di bawah.
+        if "sflix" in tpl:
+            print(f"   note: {label} p1 kosong (sflix quirk) -- cursor sim yang menentukan")
+            return True
         print(f"   !! {label}: page 1 kosong")
         return False
     slug1 = [i.get("slug") or i.get("gudangfilm_slug") for i in items1]
@@ -465,7 +471,58 @@ def probe_genre(label, path, tpl):
     if len(overlap) == len(slug2):
         print(f"   !! {label}: p2 identik p1 -> infinite scroll loop")
         return False
+    # CATATAN: hasMore=true di p2 itu NORMAL -- artinya ada p3. Yang bikin loop
+    # adalah overlap, sudah dicek di atas. hasMore hanya boleh dipakai provider
+    # sebagai "coba lagi", bukan sebagai bukti halaman terisi.
     return True
+
+
+def simulate_cursor(label, path, tpl, app_pages=4):
+    """Replikasi [catalogPage] provider: kursor halaman server + lompat saat gap.
+
+    Ini yang benar-benar menguji logika scroll -- bukan sekadar cek p1 vs p2.
+    Memverifikasi: tidak ada app page kosong, dan tidak ada slug yang muncul
+    di dua app page berurutan (duplikat = bug scroll).
+    """
+    print(f"\n-- cursor sim {label} ({app_pages} app pages) --")
+    cursor = 0
+    seen_app = []
+    ok = True
+    for app_page in range(1, app_pages + 1):
+        if app_page <= 1:
+            cursor = 0
+        candidate = cursor + 1
+        picks = None
+        server_page = None
+        tries = 0
+        max_tries = 5 if "sflix" in tpl else 3
+        while tries < max_tries:
+            url = SITE + tpl.replace("{}", str(candidate))
+            try:
+                body = json.loads(fetch(url, SITE + path) or "{}")
+            except Exception:
+                body = {}
+            items = body.get("items") or []
+            if items:
+                picks = items
+                server_page = candidate
+                cursor = candidate
+                break
+            candidate += 1
+            tries += 1
+        slugs = [(i.get("slug") or i.get("gudangfilm_slug")) for i in (picks or [])]
+        print(f"   app p{app_page} <- server p{server_page} items={len(slugs)}")
+        if not slugs:
+            print(f"   !! {label}: app page {app_page} kosong setelah {tries} percobaan")
+            ok = False
+            continue
+        prev = seen_app[-1] if seen_app else set()
+        dup = prev & set(slugs)
+        if dup:
+            print(f"   !! {label}: {len(dup)} duplikat antara app p{app_page-1} dan p{app_page}")
+            ok = False
+        seen_app.append(set(slugs))
+    return ok
 
 
 def probe_genres():
@@ -474,6 +531,7 @@ def probe_genres():
     for label, path, tpl in GENRES:
         try:
             ok &= probe_genre(label, path, tpl)
+            ok &= simulate_cursor(label, path, tpl)
         except Exception as e:
             print(f"   !! {label}: {type(e).__name__}: {e}")
             ok = False
