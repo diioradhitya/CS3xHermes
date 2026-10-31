@@ -420,11 +420,11 @@
     "name": "WGFilm21"
   },
   {
-    "fileHash": "sha256-9c213209bc7f473aa38f4d666bd788dd898deb39e49c21827e882c6d3d42842f",
+    "fileHash": "sha256-014546add9013d32652131cd134792559c0f5998be9170e8bf3a9938c4bfbd22",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 11438,
-    "status": 1,
+    "fileSize": 11359,
+    "status": 2,
     "language": "id",
     "authors": [
       "Dio R"
@@ -434,7 +434,7 @@
       "TvSeries",
       "AsianDrama"
     ],
-    "version": 1,
+    "version": 2,
     "internalName": "Moviebox",
     "description": "MovieBox - Streaming Movie and TV Series",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Moviebox/MovieboxProvider.cs3",
