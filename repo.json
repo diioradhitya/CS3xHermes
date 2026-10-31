@@ -1,9 +1,9 @@
 {
   "name": "CS3xHermes",
-  "description": "\ud83c\uddee\ud83c\udde9 Indonesian Movie & Series Repository for CloudStream",
+  "description": "🇮🇩 Indonesian Movie & Series Repository for CloudStream",
   "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=128",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/plugins.json"
+    "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261024-2150/builds/plugins.json"
   ]
 }

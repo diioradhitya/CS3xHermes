@@ -1,6 +1,6 @@
 [
     {
-        "fileHash": "sha256-5b5ecc63fe90ef30d62f9402a17db5a77b40f5cb01283ab8ecd6f611e3f135a5",
+        "fileHash": "sha256-W17MY/6Q7zDWL5QCoX21p3tA9csBKDq47Nb2EePxNaU",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 29131,
@@ -16,12 +16,12 @@
         ],
         "version": 2,
         "internalName": "Dutamovie",
-        "description": "DutaMovie - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Dutamovie.cs3",
+        "description": "Dutamovie - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Dutamovie.cs3",
         "name": "Dutamovie"
     },
     {
-        "fileHash": "sha256-a329328db2a2235a2c1103c9a311bd249133fea62153d772823593844a53e991",
+        "fileHash": "sha256-oykyjbKiI1osEQPJoxG9JJEz/qYhU9dygjWThEpT6ZE",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 26709,
@@ -38,11 +38,11 @@
         "version": 2,
         "internalName": "Filmkita",
         "description": "Filmkita - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Filmkita.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Filmkita.cs3",
         "name": "Filmkita"
     },
     {
-        "fileHash": "sha256-3342f1fcae84f6ff891101c0d8a99e7aa4784ab4570b09ace461c05ace6f91f8",
+        "fileHash": "sha256-M0Lx/K6E9v+JEQHA2KmeeqR4SrRXCwms5GHAWs5vkfg",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 21828,
@@ -58,13 +58,12 @@
         ],
         "version": 2,
         "internalName": "Filmlokal",
-        "description": "Filmlokal - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Filmlokal.cs3",
+        "description": "Filmlokal - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Filmlokal.cs3",
         "name": "Filmlokal"
     },
     {
-        "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=64",
-        "fileHash": "sha256-f36c3418e6c4b0c3ecf0260f278a27357b8027c5ad90df986f2e25ff8927ce8f",
+        "fileHash": "sha256-82w0GObEsMPs8CYPJ4onNXuAJ8WtkN+Yby4l/4knzo8",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 41792,
@@ -81,33 +80,33 @@
         "version": 15,
         "internalName": "HarufilmProvider",
         "description": "Harufilm - Streaming Film Indonesia",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/HarufilmProvider.cs3",
-        "name": "HarufilmProvider"
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/HarufilmProvider.cs3",
+        "name": "HarufilmProvider",
+        "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=64"
     },
     {
-        "iconUrl": "https://www.google.com/s2/favicons?domain=idnmovie.com&sz=64",
-        "fileHash": "sha256-820dd23520e9654d75ca09f537753c76202b40aef73ee351614268c3222ecc6a",
+        "fileHash": "sha256-t2mh0ec0c32qEAXqDxxIi73faG+lY4f6a8tBUNThOMs",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 32119,
+        "fileSize": 26356,
         "status": 1,
         "language": "id",
         "authors": [
-            "Dio R"
+            "Asm0d3usX"
         ],
         "tvTypes": [
             "Movie",
             "TvSeries",
-            "Anime"
+            "AsianDrama"
         ],
         "version": 10,
         "internalName": "IdnMovieProvider",
-        "description": "IDNMovie - Nonton Film, TV, Anime Sub Indo (idnmovie.com)",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/IdnMovieProvider.cs3",
+        "description": "IdnMovieProvider - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/IdnMovieProvider.cs3",
         "name": "IdnMovieProvider"
     },
     {
-        "fileHash": "sha256-b6bd77f329e83bc7271c436fea1ac0bfb519f627e00e909d46b81a875190f69f",
+        "fileHash": "sha256-tr138ynoO8cnHENv6hrAv7UZ9ifgDpCdRrgah1GQ9p8",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 22801,
@@ -124,11 +123,11 @@
         "version": 2,
         "internalName": "Indomax",
         "description": "Indomax - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Indomax.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Indomax.cs3",
         "name": "Indomax"
     },
     {
-        "fileHash": "sha256-a9d00014988abb41cf84c5a58530798f640571c1b427adb59c973fde9a09c044",
+        "fileHash": "sha256-qdAAFJiKu0HPhMWlhTB5j2QFccG0J621nJc/3poJwEQ",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 39381,
@@ -138,18 +137,18 @@
             "Asm0d3usX"
         ],
         "tvTypes": [
-            "AsianDrama",
+            "Movie",
             "TvSeries",
-            "Movie"
+            "AsianDrama"
         ],
         "version": 8,
         "internalName": "KawanfilmProvider",
-        "description": "KawanfilmxHermes - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/KawanfilmProvider.cs3",
+        "description": "KawanfilmProvider - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/KawanfilmProvider.cs3",
         "name": "KawanfilmProvider"
     },
     {
-        "fileHash": "sha256-72c82a8f147b3f03e44a976603fe01b0cdad47c30a4696bab069d0a02d018dd8",
+        "fileHash": "sha256-csgqjxR7PwPkSpdmA/4BsM2tR8MKRpa6sGnQoC0Bjdg",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 22778,
@@ -166,31 +165,32 @@
         "version": 2,
         "internalName": "KlikXXi",
         "description": "KlikXXi - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/KlikXXi.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/KlikXXi.cs3",
         "name": "KlikXXi"
     },
     {
-        "fileHash": "sha256-f59c66283888c07d557bdfae91d4beb84b93fe6e23743194c21dd68d5871ffc5",
+        "fileHash": "sha256-9ZxmKDiIwH1Ve9+ukdS+uEuT/m4jdDGUwh3WjVhx/8U",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 53686,
-        "status": 2,
+        "status": 1,
         "language": "id",
         "authors": [
-            "Dio R"
+            "Asm0d3usX"
         ],
         "tvTypes": [
             "Movie",
-            "TvSeries"
+            "TvSeries",
+            "AsianDrama"
         ],
         "version": 16,
         "internalName": "LayarAsiaProvider",
-        "description": "LayarAsia - Drakor, Drachin, Movie Sub Indo streaming & download",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/LayarAsiaProvider.cs3",
+        "description": "LayarAsiaProvider - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LayarAsiaProvider.cs3",
         "name": "LayarAsiaProvider"
     },
     {
-        "fileHash": "sha256-585ee8aa082139ee558494de3314af67f93ecab24fbe74e9d1b4e1ab8715dde6",
+        "fileHash": "sha256-WF7oqgghOe5VhJTeMxSvZ/k+yrJPvnTp0bThq4cV3eY",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 26324,
@@ -206,33 +206,33 @@
         ],
         "version": 2,
         "internalName": "LayarWarna",
-        "description": "LayarWarna - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/LayarWarna.cs3",
+        "description": "LayarWarna - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LayarWarna.cs3",
         "name": "LayarWarna"
     },
     {
-        "fileHash": "sha256-652d70ce0c414bfb3b0aeb1527f9977237ee51781d653722cd111e1eec855fe7",
+        "fileHash": "sha256-ZS1wzgxBS/s7CusVJ/mXcjfuUXgdZTcizREeHuyFX+c",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 35364,
         "status": 1,
         "language": "id",
         "authors": [
-            "Dio R"
+            "Asm0d3usX"
         ],
         "tvTypes": [
             "Movie",
             "TvSeries",
-            "Anime"
+            "AsianDrama"
         ],
         "version": 3,
         "internalName": "LoklokProvider",
-        "description": "Loklok - Drama, Film & Anime Sub Indo (loklok.my.id)",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/LoklokProvider.cs3",
+        "description": "LoklokProvider - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LoklokProvider.cs3",
         "name": "LoklokProvider"
     },
     {
-        "fileHash": "sha256-f18153de22c2ab647e488ba50e34fddf6e364c1d2d3524429f420a22bc5f27cb",
+        "fileHash": "sha256-8YFT3iLCq2R+SIulDjT93242TB0tNSRCn0IKIrxfJ8s",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 23251,
@@ -242,18 +242,18 @@
             "Asm0d3usX"
         ],
         "tvTypes": [
-            "AsianDrama",
+            "Movie",
             "TvSeries",
-            "Movie"
+            "AsianDrama"
         ],
         "version": 2,
         "internalName": "Ngefilm",
         "description": "Ngefilm - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Ngefilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Ngefilm.cs3",
         "name": "Ngefilm"
     },
     {
-        "fileHash": "sha256-7240b029058b9c99cb385d793cdd30145bee8e4a6f84f0e26cff4f76b19e7da6",
+        "fileHash": "sha256-ckCwKQWLnJnLOF15PN0wFFvujkpvhPDibP9PdrGefaY",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 21120,
@@ -263,40 +263,38 @@
             "Asm0d3usX"
         ],
         "tvTypes": [
-            "AsianDrama",
+            "Movie",
             "TvSeries",
-            "Movie"
+            "AsianDrama"
         ],
         "version": 2,
         "internalName": "Nomat",
         "description": "Nomat - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Nomat.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Nomat.cs3",
         "name": "Nomat"
     },
     {
-        "fileHash": "sha256-1fb42501953fabb2d66513c588557d040b4131a1d16e4bae9d0e7c6cf14429dc",
+        "fileHash": "sha256-H7QlAZU/q7LWZRPFiFV9BAtBMaHRbkuunQ58bPFEKdw",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 71110,
         "status": 1,
         "language": "id",
         "authors": [
-            "Dio R"
+            "Asm0d3usX"
         ],
         "tvTypes": [
-            "Anime",
-            "AsianDrama",
-            "Movie",
-            "TvSeries"
+            "Anime"
         ],
         "version": 14,
         "internalName": "OploverzProvider",
-        "description": "OploverzxHermes - Anime Sub Indo. Sumber utama: v2.samehadaku.how (Blogger multi-itag + Mega, validator link hidup); fallback video: oploverz.am/.ch.",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/OploverzProvider.cs3",
-        "name": "OploverzProvider"
+        "description": "Oploverz - Anime Streaming",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/OploverzProvider.cs3",
+        "name": "OploverzProvider",
+        "iconUrl": "https://www.google.com/s2/favicons?domain=oploverz.biz&sz=64"
     },
     {
-        "fileHash": "sha256-48199f9228fa486ac76abdd70718e1f6e50a71be6b957fc400a5fda15c6215e9",
+        "fileHash": "sha256-SBmfkij6SGrHar3XBxjh9uUKcb5rlX/EAKX9oVxiFek",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 17392,
@@ -307,16 +305,17 @@
         ],
         "tvTypes": [
             "Movie",
-            "TvSeries"
+            "TvSeries",
+            "AsianDrama"
         ],
         "version": 2,
         "internalName": "Pencurimovie",
-        "description": "Pencurimovie \u2014 Streaming Film & Serial",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Pencurimovie.cs3",
+        "description": "Pencurimovie - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Pencurimovie.cs3",
         "name": "Pencurimovie"
     },
     {
-        "fileHash": "sha256-269ac57a0d92b2880755e8ca919d449d090d3d5e72d9c58093389cfb4409a5c9",
+        "fileHash": "sha256-JprFeg2SsogHVejKkZ1EnQkNPV5y2cWAkzic+0QJpck",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 19534,
@@ -326,18 +325,18 @@
             "Asm0d3usX"
         ],
         "tvTypes": [
-            "AsianDrama",
+            "Movie",
             "TvSeries",
-            "Movie"
+            "AsianDrama"
         ],
         "version": 2,
         "internalName": "Pusatfilm",
-        "description": "PusatFilm - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Pusatfilm.cs3",
+        "description": "Pusatfilm - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Pusatfilm.cs3",
         "name": "Pusatfilm"
     },
     {
-        "fileHash": "sha256-995881d6809a0f1b6c356eee992415c29db1c7fe0cb02bebff720b0be606acd8",
+        "fileHash": "sha256-mViB1oCaDxtsNW7umSQVwp2xx/4MsCvr/3ILC+YGrNg",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 25812,
@@ -354,11 +353,11 @@
         "version": 2,
         "internalName": "Pusatmovie",
         "description": "Pusatmovie - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Pusatmovie.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Pusatmovie.cs3",
         "name": "Pusatmovie"
     },
     {
-        "fileHash": "sha256-08cd730ed667daf10722c500da3102ba1519b024caf3e32636a0fa82f44bcb32",
+        "fileHash": "sha256-CM1zDtZn2vEHIsUA2jECuhUZsCTK8+MmNqD6gvRLyzI",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 31927,
@@ -375,11 +374,11 @@
         "version": 2,
         "internalName": "Sarangfilm",
         "description": "Sarangfilm - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Sarangfilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Sarangfilm.cs3",
         "name": "Sarangfilm"
     },
     {
-        "fileHash": "sha256-a82016ec58acf626bc4475ffcf7c322c1b753c5db2ffe54a5a6b5de6b1aa9e91",
+        "fileHash": "sha256-qCAW7Fis9ia8RHX/z3wyLBt1PF2y/+VKWmtd5rGqnpE",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 23757,
@@ -396,11 +395,11 @@
         "version": 2,
         "internalName": "Savefilm",
         "description": "Savefilm - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/Savefilm.cs3",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/Savefilm.cs3",
         "name": "Savefilm"
     },
     {
-        "fileHash": "sha256-9612d5da62f4f5cdd3f65d0cbcbd619a63baa5eb57d6832f4525e43be9cdb4a8",
+        "fileHash": "sha256-lhLV2mL09c3T9l0MvL1hmmO6petX1oMvRSXkO+nNtKg",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
         "fileSize": 26208,
@@ -416,50 +415,8 @@
         ],
         "version": 2,
         "internalName": "WGFilm21",
-        "description": "WGFilm21 - Streaming Movie Sub Indo",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261023-0558/builds/WGFilm21.cs3",
+        "description": "WGFilm21 - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/WGFilm21.cs3",
         "name": "WGFilm21"
-    },
-    {
-        "fileHash": "sha256-5b5ecc63fe90ef30d62f9402a17db5a77b40f5cb01283ab8ecd6f611e3f135a5",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 29131,
-        "status": 1,
-        "language": "id",
-        "authors": [
-            "MovieBox Team"
-        ],
-        "tvTypes": [
-            "Movie",
-            "TvSeries",
-            "AsianDrama"
-        ],
-        "version": 1,
-        "internalName": "MovieboxProvider",
-        "description": "MovieBox - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261024-2150/builds/MovieboxProvider.cs3",
-        "name": "MovieboxProvider"
-    },
-    {
-        "fileHash": "sha256-8571b718eb57441cedda4981aa33fa307d020b52897edb001e6753f618f7fb7f",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 29131,
-        "status": 1,
-        "language": "id",
-        "authors": [
-            "MovieBox Team"
-        ],
-        "tvTypes": [
-            "Movie",
-            "TvSeries",
-            "AsianDrama"
-        ],
-        "version": 1,
-        "internalName": "Moviebox",
-        "description": "MovieBox - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/build-20261024-2150/builds/Moviebox/MovieboxProvider.cs3",
-        "name": "Moviebox"
     }
 ]

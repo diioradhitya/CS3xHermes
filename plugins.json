@@ -1,9 +1,9 @@
 [
     {
-        "fileHash": "sha256-KDUaRUTveo5hCkTALleHdYSR7hwsGRNLfjQ2AZxYloE",
+        "fileHash": "sha256-W17MY/6Q7zDWL5QCoX21p3tA9csBKDq47Nb2EePxNaU",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 29183,
+        "fileSize": 29131,
         "status": 1,
         "language": "id",
         "authors": [
@@ -21,10 +21,10 @@
         "name": "Dutamovie"
     },
     {
-        "fileHash": "sha256-lxG/5Skxwtj9/MFsPcInhr1uCIyIbEOjSfossiv2P9o",
+        "fileHash": "sha256-oykyjbKiI1osEQPJoxG9JJEz/qYhU9dygjWThEpT6ZE",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 26833,
+        "fileSize": 26709,
         "status": 1,
         "language": "id",
         "authors": [
@@ -42,10 +42,10 @@
         "name": "Filmkita"
     },
     {
-        "fileHash": "sha256-8DMRNf2n7VPDBarwnRgFjUbI2gx07AGWpX48APtAZ/0",
+        "fileHash": "sha256-M0Lx/K6E9v+JEQHA2KmeeqR4SrRXCwms5GHAWs5vkfg",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 21865,
+        "fileSize": 21828,
         "status": 1,
         "language": "id",
         "authors": [
@@ -63,10 +63,10 @@
         "name": "Filmlokal"
     },
     {
-        "fileHash": "sha256-iUGmQWCDh6C9SVaV1u/bmk/BPsHR5ELhvqboLQ5PXjw",
+        "fileHash": "sha256-82w0GObEsMPs8CYPJ4onNXuAJ8WtkN+Yby4l/4knzo8",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 41763,
+        "fileSize": 41792,
         "status": 1,
         "language": "id",
         "authors": [
@@ -85,10 +85,10 @@
         "iconUrl": "https://www.google.com/s2/favicons?domain=harufilm.my.id&sz=64"
     },
     {
-        "fileHash": "sha256-SHm8vY14GqSfoqfUqYYN+HoUYwHZi36OuwBiADMH1Ws",
+        "fileHash": "sha256-t2mh0ec0c32qEAXqDxxIi73faG+lY4f6a8tBUNThOMs",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 32880,
+        "fileSize": 26356,
         "status": 1,
         "language": "id",
         "authors": [
@@ -106,10 +106,10 @@
         "name": "IdnMovieProvider"
     },
     {
-        "fileHash": "sha256-wS7BHc4jX6aAfX+FU2joncIsrCCMHnlV96Vrj3WiphQ",
+        "fileHash": "sha256-tr138ynoO8cnHENv6hrAv7UZ9ifgDpCdRrgah1GQ9p8",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 22763,
+        "fileSize": 22801,
         "status": 1,
         "language": "id",
         "authors": [
@@ -127,10 +127,10 @@
         "name": "Indomax"
     },
     {
-        "fileHash": "sha256-CoJRJcQ3XHUfGlJiYttfFMJwKHVrkNh/9PBsPpVP7po",
+        "fileHash": "sha256-qdAAFJiKu0HPhMWlhTB5j2QFccG0J621nJc/3poJwEQ",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 39393,
+        "fileSize": 39381,
         "status": 1,
         "language": "id",
         "authors": [
@@ -148,10 +148,10 @@
         "name": "KawanfilmProvider"
     },
     {
-        "fileHash": "sha256-WeF4euNSQQez8v1W5yo0HHLz749r/oQ9m7vDISdnqkM",
+        "fileHash": "sha256-csgqjxR7PwPkSpdmA/4BsM2tR8MKRpa6sGnQoC0Bjdg",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 22948,
+        "fileSize": 22778,
         "status": 1,
         "language": "id",
         "authors": [
@@ -169,10 +169,10 @@
         "name": "KlikXXi"
     },
     {
-        "fileHash": "sha256-cheu2GQwJuwRIrL26etEZk7VGRsnv2hHUwBvoNibmEg",
+        "fileHash": "sha256-9ZxmKDiIwH1Ve9+ukdS+uEuT/m4jdDGUwh3WjVhx/8U",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 15878,
+        "fileSize": 53686,
         "status": 1,
         "language": "id",
         "authors": [
@@ -183,17 +183,17 @@
             "TvSeries",
             "AsianDrama"
         ],
-        "version": 2,
-        "internalName": "KuronimeSBS",
-        "description": "KuronimeSBS - Streaming Movie and TV Series",
-        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/KuronimeSBS.cs3",
-        "name": "KuronimeSBS"
+        "version": 16,
+        "internalName": "LayarAsiaProvider",
+        "description": "LayarAsiaProvider - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LayarAsiaProvider.cs3",
+        "name": "LayarAsiaProvider"
     },
     {
-        "fileHash": "sha256-bHNPectwHwJZQBWif0Nz+EMXWSwtiG80jPwAaou/2MM",
+        "fileHash": "sha256-WF7oqgghOe5VhJTeMxSvZ/k+yrJPvnTp0bThq4cV3eY",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 26339,
+        "fileSize": 26324,
         "status": 1,
         "language": "id",
         "authors": [
@@ -211,10 +211,31 @@
         "name": "LayarWarna"
     },
     {
-        "fileHash": "sha256-4TNtNQkLsuq747TltadhoazP6vOp2+z82EP80VmZqaM",
+        "fileHash": "sha256-ZS1wzgxBS/s7CusVJ/mXcjfuUXgdZTcizREeHuyFX+c",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 23245,
+        "fileSize": 35364,
+        "status": 1,
+        "language": "id",
+        "authors": [
+            "Asm0d3usX"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "AsianDrama"
+        ],
+        "version": 3,
+        "internalName": "LoklokProvider",
+        "description": "LoklokProvider - Streaming Movie and TV Series",
+        "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/LoklokProvider.cs3",
+        "name": "LoklokProvider"
+    },
+    {
+        "fileHash": "sha256-8YFT3iLCq2R+SIulDjT93242TB0tNSRCn0IKIrxfJ8s",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
+        "fileSize": 23251,
         "status": 1,
         "language": "id",
         "authors": [
@@ -232,10 +253,10 @@
         "name": "Ngefilm"
     },
     {
-        "fileHash": "sha256-ffG8GhmuV/5YvQJg8CIoPAHNNDs3u7cjP70eCvs/I/Q",
+        "fileHash": "sha256-ckCwKQWLnJnLOF15PN0wFFvujkpvhPDibP9PdrGefaY",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 21111,
+        "fileSize": 21120,
         "status": 1,
         "language": "id",
         "authors": [
@@ -253,10 +274,10 @@
         "name": "Nomat"
     },
     {
-        "fileHash": "sha256-v/6Ts4PN7FqKX++dNufKWXU5hm9y6o3x8mQH4uTMdrI",
+        "fileHash": "sha256-H7QlAZU/q7LWZRPFiFV9BAtBMaHRbkuunQ58bPFEKdw",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 38186,
+        "fileSize": 71110,
         "status": 1,
         "language": "id",
         "authors": [
@@ -273,10 +294,10 @@
         "iconUrl": "https://www.google.com/s2/favicons?domain=oploverz.biz&sz=64"
     },
     {
-        "fileHash": "sha256-cm+fDSpZYopf6CYyT8p1B7xyWLNspPYCnV8NBtolhtc",
+        "fileHash": "sha256-SBmfkij6SGrHar3XBxjh9uUKcb5rlX/EAKX9oVxiFek",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 17416,
+        "fileSize": 17392,
         "status": 1,
         "language": "id",
         "authors": [
@@ -294,10 +315,10 @@
         "name": "Pencurimovie"
     },
     {
-        "fileHash": "sha256-a5LFmtVllwu3PFUMW/0hpR4d9rrkaOUCLoDj3DqiQ/o",
+        "fileHash": "sha256-JprFeg2SsogHVejKkZ1EnQkNPV5y2cWAkzic+0QJpck",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 19526,
+        "fileSize": 19534,
         "status": 1,
         "language": "id",
         "authors": [
@@ -315,10 +336,10 @@
         "name": "Pusatfilm"
     },
     {
-        "fileHash": "sha256-7+gWK2wOvUzKPm0BVHK4Xxugq2hiXoc09amM8c9fQKk",
+        "fileHash": "sha256-mViB1oCaDxtsNW7umSQVwp2xx/4MsCvr/3ILC+YGrNg",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 25836,
+        "fileSize": 25812,
         "status": 1,
         "language": "id",
         "authors": [
@@ -336,10 +357,10 @@
         "name": "Pusatmovie"
     },
     {
-        "fileHash": "sha256-lHXyLmVWfd0DRsJEMcmaVB0HDpgvncIoPeD4C8XoEQo",
+        "fileHash": "sha256-CM1zDtZn2vEHIsUA2jECuhUZsCTK8+MmNqD6gvRLyzI",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 31945,
+        "fileSize": 31927,
         "status": 1,
         "language": "id",
         "authors": [
@@ -357,10 +378,10 @@
         "name": "Sarangfilm"
     },
     {
-        "fileHash": "sha256-7B20qY0mIXCoK6W7VMR6AnPUrzHwkrxn9KSQIDNL14o",
+        "fileHash": "sha256-qCAW7Fis9ia8RHX/z3wyLBt1PF2y/+VKWmtd5rGqnpE",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 23793,
+        "fileSize": 23757,
         "status": 1,
         "language": "id",
         "authors": [
@@ -378,10 +399,10 @@
         "name": "Savefilm"
     },
     {
-        "fileHash": "sha256-9S5j2Syn81l9XgB1hwxb8qAJSyOrzoZwaim5XPKC3Bk",
+        "fileHash": "sha256-lhLV2mL09c3T9l0MvL1hmmO6petX1oMvRSXkO+nNtKg",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-        "fileSize": 26206,
+        "fileSize": 26208,
         "status": 1,
         "language": "id",
         "authors": [
