@@ -400,8 +400,8 @@
         "name": "MovieBox",
         "internalName": "MovieBoxProvider",
         "version": 2,
-        "fileSize": 11964,
-        "fileHash": "sha256-66ce8f3191825dd7300091cd223a61519bcb3003a89e2bd6e409b2309fa68dd5",
+        "fileSize": 13782,
+        "fileHash": "sha256-00ab9892071d84967d365d02e4ac5dd08ad74ee82f2d6165021e459551e3069d",
         "status": 2,
         "authors": [
             "Dio R"
