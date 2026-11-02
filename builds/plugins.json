@@ -399,9 +399,9 @@
     {
         "name": "MovieBox",
         "internalName": "MovieBoxProvider",
-        "version": 2,
-        "fileSize": 13782,
-        "fileHash": "sha256-00ab9892071d84967d365d02e4ac5dd08ad74ee82f2d6165021e459551e3069d",
+        "version": 3,
+        "fileSize": 13828,
+        "fileHash": "sha256-ff1606118c5cd80842f0f3c22c57fa24665d4a59340a04b9fbbc7badef0cabd9",
         "status": 2,
         "authors": [
             "Dio R"
