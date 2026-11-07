@@ -93,11 +93,13 @@ class SamehadakuProvider : MainAPI() {
         }
     }
 
+    // Hanya 2 tab: Terbaru (= /anime-terbaru/) dan Top Minggu.
+    // Tab "Latest Episode" dihapus karena isinya sama persis dengan
+    // /anime-terbaru/ (sama-sama daftar 10 episode terbaru).
     override val mainPage =
             mainPageOf(
                     "anime-terbaru" to "Terbaru",
                     "top10" to "Top Minggu",
-                    "latest" to "Latest Episode",
             )
 
     /**
@@ -349,17 +351,13 @@ class SamehadakuProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val base = request.data
-        // Top 10 & Latest Episode widget di homepage TIDAK berpaginasi
-        // (widget sama di semua page) - hanya page 1 yang di-fetch.
-        // Terbaru (/anime-terbaru/) yang berpaginasi benar via /page/N/.
+        // Top 10 widget di homepage TIDAK berpaginasi (sama di semua page)
+        // - hanya page 1 yang di-fetch. Terbaru (/anime-terbaru/) yang
+        // berpaginasi benar via /page/N/.
         when (base) {
             "top10" -> {
                 val doc = samehDoc("/", "entry-title")
                 return newHomePageResponse(request.name, doc.top10Results())
-            }
-            "latest" -> {
-                val doc = samehDoc("/", "entry-title")
-                return newHomePageResponse(request.name, doc.latestResults())
             }
             else -> {
                 val path = if (page > 1) "/anime-terbaru/page/$page/" else "/anime-terbaru/"
@@ -377,25 +375,6 @@ class SamehadakuProvider : MainAPI() {
             val url = seriesUrl(a.attr("href")) ?: continue
             val title = cleanTitle(a.attr("title").ifBlank { a.selectFirst("span.judul")?.text() ?: a.text() }).ifEmpty { continue }
             val img = a.selectFirst("img")
-            out.add(
-                    newAnimeSearchResponse(title, url, TvType.Anime) {
-                        this.posterUrl = img?.posterSrc()
-                    })
-        }
-        return out
-    }
-
-    // Parse Latest Episode section dari root page (.latestepisode_widget)
-    private fun Document.latestResults(): List<SearchResponse> {
-        val out = mutableListOf<SearchResponse>()
-        val seen = mutableSetOf<String>()
-        val widget = selectFirst("div.latestepisode_widget") ?: return out
-        for (li in widget.select("li[itemtype]")) {
-            val a = li.selectFirst("h2.entry-title > a[href]") ?: continue
-            val url = seriesUrl(a.attr("href")) ?: continue
-            if (!seen.add(url)) continue
-            val title = cleanTitle(a.attr("title").ifBlank { a.text() }).ifEmpty { continue }
-            val img = li.selectFirst("div.thumb img")
             out.add(
                     newAnimeSearchResponse(title, url, TvType.Anime) {
                         this.posterUrl = img?.posterSrc()
@@ -630,18 +609,23 @@ class SamehadakuProvider : MainAPI() {
             //    ExoPlayer) vs URL embed (halaman HTML yang harus lewat
             //    extractor CloudStream). Embed yang dikembalikan apa adanya
             //    sebagai VIDEO bakal Error 2001 (filedon/pixeldrain) / 3003 (mega).
+            //    Dedup by URL file: dua server (mis. embed yang resolve ke
+            //    file MP4 yang sama dengan link langsung) tidak boleh tampil
+            //    dua kali dengan resolusi sama.
+            val seenUrls = mutableSetOf<String>()
             for (server in SamehadakuParser.episodeServers(normData)) {
                 val u = server.embedUrl
                 when {
                     u.contains("blogger.com", ignoreCase = true) -> {
                         Blogger().getUrl(server.embedUrl, server.referer) {
-                            links.add(it)
+                            if (seenUrls.add(it.url)) links.add(it)
                         }
                     }
                     u.contains("mega.nz", ignoreCase = true) -> {
                         // Mega terenkripsi AES - TIDAK bisa diputar native.
                         // Tetap ditambahkan terakhir (validasi isFileAlive)
                         // untuk keperluan copy ke downloader, bukan untuk play utama.
+                        if (!seenUrls.add(u)) continue
                         links.add(
                                 newExtractorLink(
                                         "Samehadaku",
@@ -655,6 +639,7 @@ class SamehadakuProvider : MainAPI() {
                     // File video langsung: wibufile s0.*.mp4, dsb.
                     u.substringBefore('?').endsWith(".mp4", true) ||
                             u.substringBefore('?').endsWith(".m3u8", true) -> {
+                        if (!seenUrls.add(u)) continue
                         links.add(
                                 newExtractorLink(
                                         "Samehadaku",
@@ -678,6 +663,7 @@ class SamehadakuProvider : MainAPI() {
                             loadExtractor(u, server.referer, subtitleCallback) { collected.add(it) }
                         }
                         for (c in collected) {
+                            if (!seenUrls.add(c.url)) continue
                             if (c.quality == Qualities.Unknown.value) {
                                 c.quality = server.quality
                             }
