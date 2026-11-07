@@ -396,10 +396,10 @@
     "apiVersion": 1
   },
   {
-    "fileHash": "sha256-8c61f04b85ba07fd08daeedd4a13a4cf7d8d66feccab17354b7d7daf2c87e32f",
+    "fileHash": "sha256-4bf53a9046163598dff5f24492d422ece8a172fb40b185f5921fc66a75c5345f",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/diioradhitya/CS3xHermes",
-    "fileSize": 53724,
+    "fileSize": 54429,
     "status": 1,
     "language": "id",
     "authors": [
@@ -411,7 +411,7 @@
       "Movie",
       "TvSeries"
     ],
-    "version": 19,
+    "version": 20,
     "internalName": "SamehadakuProvider",
     "description": "SamehadakuxHermes - Anime Sub Indo. Sumber utama: v2.samehadaku.how (Top 10 / Latest Episode / Terbaru tabs, Blogger multi-itag + Mega 480-4K, validator link hidup); fallback video: oploverz.am/.ch.",
     "url": "https://raw.githubusercontent.com/diioradhitya/CS3xHermes/main/builds/SamehadakuProvider.cs3",

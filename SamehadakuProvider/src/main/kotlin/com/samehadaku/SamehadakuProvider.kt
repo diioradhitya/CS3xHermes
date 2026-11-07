@@ -166,29 +166,45 @@ class SamehadakuProvider : MainAPI() {
 
     private suspend fun fetchTmdbBackdrop(title: String, type: TvType): String? =
             withContext(Dispatchers.IO) {
-                val q = java.net.URLEncoder.encode(title, "UTF-8")
-                val kind = if (type == TvType.AnimeMovie || type == TvType.Movie) "movie" else "tv"
-                // search multi dulu (anime bisa movie/tv), fallback ke kind
-                val url = URL(
-                    "https://api.themoviedb.org/3/search/$kind" +
-                            "?api_key=$TMDB_API_KEY&query=$q&language=id-ID&include_adult=false&page=1"
-                )
-                val conn = url.openConnection() as HttpURLConnection
-                conn.apply {
-                    requestMethod = "GET"
-                    setRequestProperty("User-Agent", BROWSER_UA)
-                    connectTimeout = 8000
-                    readTimeout = 8000
-                }
-                val text = conn.inputStream.bufferedReader().readText()
-                conn.disconnect()
-                val obj = JSONObject(text)
-                val arr = obj.optJSONArray("results") ?: return@withContext null
-                for (i in 0 until arr.length()) {
-                    val item = arr.optJSONObject(i) ?: continue
-                    val backdrop = item.optString("backdrop_path").takeIf { it.isNotBlank() }
-                        ?: continue
-                    return@withContext "https://image.tmdb.org/t/p/w1280$backdrop"
+                // Bersihkan judul supaya search TMDB lebih relevan
+                // ("Chainsaw Man Reze-hen Movie" -> "Chainsaw Man Reze-hen")
+                val clean =
+                    title.replace(Regex("\\s*(Movie|Film)\\s*$", RegexOption.IGNORE_CASE), "").trim()
+                val q = java.net.URLEncoder.encode(clean, "UTF-8")
+                val primary =
+                    if (type == TvType.AnimeMovie || type == TvType.Movie) "movie" else "tv"
+                val kinds = listOf(primary, if (primary == "movie") "tv" else "movie")
+                for (kind in kinds) {
+                    try {
+                        val url = URL(
+                            "https://api.themoviedb.org/3/search/$kind" +
+                                    "?api_key=$TMDB_API_KEY&query=$q&language=id-ID&include_adult=false&page=1"
+                        )
+                        val conn = url.openConnection() as HttpURLConnection
+                        conn.apply {
+                            requestMethod = "GET"
+                            setRequestProperty("User-Agent", BROWSER_UA)
+                            connectTimeout = 8000
+                            readTimeout = 8000
+                        }
+                        if (conn.responseCode != 200) {
+                            conn.disconnect()
+                            continue
+                        }
+                        val text = conn.inputStream.bufferedReader().readText()
+                        conn.disconnect()
+                        val obj = JSONObject(text)
+                        val arr = obj.optJSONArray("results") ?: continue
+                        for (i in 0 until arr.length()) {
+                            val item = arr.optJSONObject(i) ?: continue
+                            val backdrop =
+                                item.optString("backdrop_path").takeIf { it.isNotBlank() }
+                                    ?: continue
+                            return@withContext "https://image.tmdb.org/t/p/w1280$backdrop"
+                        }
+                    } catch (e: Throwable) {
+                        // coba kind berikutnya
+                    }
                 }
                 null
             }
@@ -271,11 +287,17 @@ class SamehadakuProvider : MainAPI() {
      * - /<series>-episode-<N>/  -> /anime/<series>/
      */
     private fun seriesUrl(href: String): String? {
-        val path = normalizeHref(href).substringAfter("://").substringAfter('/')
+        val normalized = normalizeHref(href)
+        val path = normalized.substringAfter("://").substringAfter('/')
         if (path.startsWith("anime/")) return "$mainHost/anime/${path.removePrefix("anime/").trim('/')}/"
         val slug = path.trim('/').substringBefore('?').substringBefore('/')
                 .replace(Regex("-episode-\\d+.*$"), "").trim('-')
-        return if (slug.isBlank()) null else "$mainHost/anime/$slug/"
+        if (slug.isBlank()) return null
+        // Movie hanya punya halaman post /<slug-movie>/, TIDAK punya halaman
+        // series /anime/<slug-movie>/ (404 / tanpa marker). Jangan paksa
+        // jadi /anime/... - load() akan memproses post langsung sebagai Movie.
+        if (slug.contains("-movie", ignoreCase = true)) return normalized
+        return "$mainHost/anime/$slug/"
     }
 
     /** Bersihkan judul dari embel ep / subtitle yang lekat di situs ini. */
@@ -426,10 +448,19 @@ class SamehadakuProvider : MainAPI() {
                 if (url.startsWith("http"))
                     url.substringAfter("://").substringAfter('/').let { "/$it" }
                 else url
+        val normPath = if (path.endsWith("/")) path else "$path/"
         val doc =
-                samehDocAny(
-                        if (path.endsWith("/")) path else "$path/",
-                        listOf("headline", "entry-title", "player-option"))
+                try {
+                    samehDocAny(normPath, listOf("headline", "entry-title", "player-option"))
+                } catch (e: Throwable) {
+                    // Kartu lama bisa menunjuk /anime/<slug-movie>/ yang tidak
+                    // ada markernya. Fallback ke post /<slug-movie>/.
+                    val altPath =
+                            if (normPath.startsWith("/anime/")) "/${normPath.removePrefix("/anime/")}"
+                            else "/anime/${normPath.trim('/')}/"
+                    if (altPath == normPath) throw e
+                    samehDocAny(altPath, listOf("headline", "entry-title", "player-option"))
+                }
 
         val title =
                 cleanTitle(
