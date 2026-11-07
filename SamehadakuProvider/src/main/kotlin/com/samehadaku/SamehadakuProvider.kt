@@ -152,7 +152,7 @@ class SamehadakuProvider : MainAPI() {
      * 2) AniList GraphQL (tanpa key) bannerImage - kualitas backdrop sama
      *    seperti TMDB, dipakai sebagai fallback otomatis.
      */
-    private val TMDB_API_KEY = "" // isi API key TMDB di sini untuk banner TMDB
+    private val TMDB_API_KEY = "0e07042b3e94cd9bbb1901443500693b"
 
     private suspend fun fetchBanner(title: String, malId: Int?, type: TvType): String? {
         // 1) TMDB bila API key dikonfigurasi
