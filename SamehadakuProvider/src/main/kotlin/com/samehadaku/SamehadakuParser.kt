@@ -2,6 +2,8 @@ package com.samehadaku
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.delay
+import org.jsoup.Jsoup
 
 /**
  * Sumber video alternatif: samehadaku.how
@@ -148,19 +150,32 @@ internal object SamehadakuParser {
 
     /** Parse daftar server (Blogger + Mega) dari halaman episode Samehadaku. */
     suspend fun episodeServers(episodeUrl: String): List<Server> {
-        val html =
+        // Normalisasi URL agar selalu lengkap dengan scheme + host
+        val url = if (episodeUrl.startsWith("http")) episodeUrl
+            else BASE + (if (episodeUrl.startsWith("/")) episodeUrl else "/$episodeUrl")
+        var html: String = ""
+        try {
+            var lastError: Throwable? = null
+            for (attempt in 0..2) {
                 try {
-                    app.get(episodeUrl, headers = mapOf("User-Agent" to BROWSER_UA)).text
+                    html = app.get(url, headers = mapOf("User-Agent" to BROWSER_UA)).text
+                    break
                 } catch (e: Throwable) {
-                    return emptyList()
+                    lastError = e
+                    if (attempt < 2) delay(700)
+                    else throw e
                 }
+            }
+        } catch (e: Throwable) {
+            return emptyList()
+        }
         val out = mutableListOf<Server>()
-        // <div id="player-option-N" class="east_player_option ..." data-embed="<iframe src="...">">
-        val tagRe = Regex("""<div[^>]*id="player-option-\d+"[^>]*>""", RegexOption.IGNORE_CASE)
-        for (m in tagRe.findAll(html)) {
-            val tag = m.groupValues[0]
-            val embed =
-                    Regex("""data-embed="([^"]*)"""").find(tag)?.groupValues?.get(1).orEmpty()
+        // Pakai jsoup supaya tahan terhadap HTML multi-baris seperti:
+        // <div id="player-option-1"
+        //      data-embed="...">
+        val doc = Jsoup.parse(html)
+        for (el in doc.select("div[id^=player-option-]")) {
+            val embed = el.attr("data-embed")
             if (embed.isBlank()) continue
             // nilai atribut di-escape sebagai HTML entity: <iframe src="...">
             // Juga ada numeric entity &#038; (= &) yang harus didecode.
@@ -179,12 +194,8 @@ internal object SamehadakuParser {
             val url = src.trim().replace("&", "&")
             if (url.isEmpty()) continue
             // Label server = teks di dalam div (mis. "Mega 1080p").
-            // Markup antar server bisa berbeda (span, span bersarang, atau
-            // teks langsung), jadi semua tag di dalam div dibuang dulu.
-            val closeAt = html.indexOf("</div>", m.range.last).let { if (it < 0) m.range.last + 600 else it }
-            val inner = html.substring(m.range.last + 1, (closeAt).coerceAtMost(html.length))
             val label =
-                    inner.replace(Regex("""<[^>]*>"""), " ")
+                    el.text()
                             .replace("&nbsp;", " ")
                             .trim()
                             .split(Regex("""\s+"""))

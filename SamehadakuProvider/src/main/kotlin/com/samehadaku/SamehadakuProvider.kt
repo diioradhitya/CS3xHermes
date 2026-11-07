@@ -177,19 +177,35 @@ class SamehadakuProvider : MainAPI() {
     private fun Document.homeResults(): List<SearchResponse> {
         val out = mutableListOf<SearchResponse>()
         val seen = mutableSetOf<String>()
+
+        // Latest Episode section: div.latestepisode_widget > li[itemtype] > div.dtla > h2.entry-title > a
         for (a in select("h2.entry-title > a[href]")) {
             val url = seriesUrl(a.attr("href")) ?: continue
             if (!seen.add(url)) continue
             val title = cleanTitle(a.attr("title").ifBlank { a.text() }).ifEmpty { continue }
-            // poster: img di div.thumb milik kartu yang sama (parent berisi keduanya)
-            val img =
-                    a.parents().firstOrNull { it.selectFirst("div.thumb img") != null }
-                            ?.selectFirst("div.thumb img")
+            val li = a.closest("li") ?: a.parent()
+            val img = li?.selectFirst("div.thumb img") ?: a.parents().firstOrNull { it.selectFirst("div.thumb img") != null }?.selectFirst("div.thumb img")
             out.add(
                     newAnimeSearchResponse(title, url, TvType.Anime) {
                         this.posterUrl = img?.attr("src")?.trim()?.ifEmpty { null }
                     })
         }
+
+        // Top 10 section: div.widget_senction.top10-section > ul > li > a.series[href*=/anime/]
+        val widget = selectFirst("div.widget_senction.top10-section")
+        if (widget != null) {
+            for (a in widget.select("a.series[href*=/anime/]")) {
+                val url = seriesUrl(a.attr("href")) ?: continue
+                if (!seen.add(url)) continue
+                val title = cleanTitle(a.attr("title").ifBlank { a.selectFirst("span.judul")?.text() ?: a.text() }).ifEmpty { continue }
+                val img = a.selectFirst("img")
+                out.add(
+                        newAnimeSearchResponse(title, url, TvType.Anime) {
+                            this.posterUrl = img?.attr("src")?.trim()?.ifEmpty { null }
+                        })
+            }
+        }
+
         return out
     }
 
@@ -425,15 +441,13 @@ class SamehadakuProvider : MainAPI() {
     ): Boolean {
         val links = mutableListOf<ExtractorLink>()
 
-        if (data.contains("samehadaku.how", ignoreCase = true)) {
-            // 1) SUMBER UTAMA: halaman episode samehadaku (data link langsung
-            //    ke post episode sama - tidak perlu mapping judul lagi).
-            //    Server: "Blogspot" (blogger.com, 360p/720p/1080p) + "Mega
-            //    480p/720p/1080p/4K" (mega.nz/embed/...).
-            for (server in SamehadakuParser.episodeServers(data)) {
+        // Normalisasi data menjadi URL penuh
+        val normData = if (data.startsWith("http")) data else mainHost + (if (data.startsWith("/")) data else "/$data")
+
+        if (normData.contains("samehadaku.how", ignoreCase = true)) {
+            // 1) SUMBER UTAMA: halaman episode samehadaku
+            for (server in SamehadakuParser.episodeServers(normData)) {
                 if (server.embedUrl.contains("blogger.com", ignoreCase = true)) {
-                    // Extractor Blogger custom: mengambil SEMUA itag
-                    // (360p/720p/1080p) jadi link terpisah.
                     Blogger().getUrl(server.embedUrl, server.referer) {
                         links.add(it)
                     }
@@ -457,7 +471,7 @@ class SamehadakuProvider : MainAPI() {
             //    - halaman episode samehadaku tidak punya server hidup.
             //    Post episode oploverz: /<slug>-episode-<N>-subtitle-indonesia/
             //    (slug & nomor bisa ditebak langsung dari URL episode samehadaku).
-            val path = data.substringAfterLast('/').trim('/').substringBefore('?')
+            val path = normData.substringAfterLast('/').trim('/').substringBefore('?')
             val slug = path.substringBefore("-episode-").trim('-')
             val num = Regex("-episode-(\\d+)").find(path)?.groupValues?.get(1)
             val host = oplHosts[oplHostIndex]
