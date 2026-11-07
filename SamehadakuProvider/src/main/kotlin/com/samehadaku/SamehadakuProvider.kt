@@ -351,18 +351,22 @@ class SamehadakuProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val base = request.data
-        // Top 10 widget di homepage TIDAK berpaginasi (sama di semua page)
-        // - hanya page 1 yang di-fetch. Terbaru (/anime-terbaru/) yang
-        // berpaginasi benar via /page/N/.
+        // Pagination benar untuk kedua tab:
+        // - Top Minggu: /top10/ (page 1) dan /top10/page/N/ (page 2+)
+        //   Terverifikasi: /top10/page/2/ menampilkan 10 seri BERBEDA
+        //   (ranking 11-20), bukan widget yang sama. hasNext harus true
+        //   selama halaman tidak kosong supaya CloudStream lanjut scroll.
+        // - Terbaru: /anime-terbaru/ dan /anime-terbaru/page/N/
         when (base) {
             "top10" -> {
-                val doc = samehDoc("/", "entry-title")
-                return newHomePageResponse(request.name, doc.top10Results())
+                val path = if (page > 1) "/top10/page/$page/" else "/top10/"
+                val results = runCatching { samehDoc(path, "entry-title").top10Results() }.getOrNull() ?: emptyList()
+                return newHomePageResponse(request.name, results, results.isNotEmpty())
             }
             else -> {
                 val path = if (page > 1) "/anime-terbaru/page/$page/" else "/anime-terbaru/"
-                val doc = samehDoc(path, "entry-title")
-                return newHomePageResponse(request.name, doc.homeResults())
+                val results = samehDoc(path, "entry-title").homeResults()
+                return newHomePageResponse(request.name, results, results.isNotEmpty())
             }
         }
     }
@@ -629,7 +633,7 @@ class SamehadakuProvider : MainAPI() {
                         links.add(
                                 newExtractorLink(
                                         "Samehadaku",
-                                        server.label.ifBlank { "Mega" },
+                                        server.sourceName.ifBlank { "Mega" },
                                         server.embedUrl,
                                         ExtractorLinkType.VIDEO) {
                                     this.quality = server.quality
@@ -643,7 +647,7 @@ class SamehadakuProvider : MainAPI() {
                         links.add(
                                 newExtractorLink(
                                         "Samehadaku",
-                                        server.label.ifBlank { "Samehadaku" },
+                                        server.sourceName.ifBlank { "Samehadaku" },
                                         u,
                                         if (u.substringBefore('?').endsWith(".m3u8", true))
                                             ExtractorLinkType.M3U8

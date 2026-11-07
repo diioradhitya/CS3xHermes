@@ -29,6 +29,21 @@ internal object SamehadakuParser {
             get() = embedUrl.contains("mega.nz", ignoreCase = true)
 
         /**
+         * Nama sumber SAJA tanpa resolusi ("Wibufile", "Mega").
+         * CloudStream menampilkan `name + quality`, jadi kalau name masih
+         * "Wibufile 720p" dan quality=720 tampil "Wibufile 720p 720p".
+         */
+        val sourceName: String
+            get() =
+                    label.replace(
+                                    Regex(
+                                            """\s*(4k|2160p?|2k|1440p?|1080p?|720p?|480p?|360p?|uhd|qhd|full\s?hd|mp4\s?hd|hd)\s*$""",
+                                            RegexOption.IGNORE_CASE),
+                                    "")
+                            .trim()
+                            .ifBlank { "Samehadaku" }
+
+        /**
          * Resolusi untuk track/submenu di player CloudStream.
          * [com.lagradost.cloudstream3.utils.ExtractorLink.quality] dibaca ExoPlayer
          * sebagai track video terpisah - WAJIB beda per resolusi (480/720/1080/1440/2160),
