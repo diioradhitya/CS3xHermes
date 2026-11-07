@@ -164,50 +164,44 @@ class SamehadakuProvider : MainAPI() {
         return null
     }
 
-    private suspend fun fetchTmdbBackdrop(title: String, type: TvType): String? =
-            withContext(Dispatchers.IO) {
-                // Bersihkan judul supaya search TMDB lebih relevan
-                // ("Chainsaw Man Reze-hen Movie" -> "Chainsaw Man Reze-hen")
-                val clean =
-                    title.replace(Regex("\\s*(Movie|Film)\\s*$", RegexOption.IGNORE_CASE), "").trim()
-                val q = java.net.URLEncoder.encode(clean, "UTF-8")
-                val primary =
-                    if (type == TvType.AnimeMovie || type == TvType.Movie) "movie" else "tv"
-                val kinds = listOf(primary, if (primary == "movie") "tv" else "movie")
-                for (kind in kinds) {
-                    try {
-                        val url = URL(
-                            "https://api.themoviedb.org/3/search/$kind" +
-                                    "?api_key=$TMDB_API_KEY&query=$q&language=id-ID&include_adult=false&page=1"
-                        )
-                        val conn = url.openConnection() as HttpURLConnection
-                        conn.apply {
-                            requestMethod = "GET"
-                            setRequestProperty("User-Agent", BROWSER_UA)
-                            connectTimeout = 8000
-                            readTimeout = 8000
+    private suspend fun fetchTmdbBackdrop(title: String, type: TvType): String? {
+        // Bersihkan judul supaya search TMDB lebih relevan
+        // ("Chainsaw Man Reze-hen Movie" -> "Chainsaw Man Reze-hen")
+        val clean =
+            title.replace(Regex("\\s*(Movie|Film)\\s*$", RegexOption.IGNORE_CASE), "").trim()
+        if (clean.isBlank()) return null
+        val q = java.net.URLEncoder.encode(clean, "UTF-8")
+        val primary =
+            if (type == TvType.AnimeMovie || type == TvType.Movie) "movie" else "tv"
+        val kinds = listOf(primary, if (primary == "movie") "tv" else "movie")
+        // Coba en-US dulu (judul TMDB Inggris), lalu id-ID. Pakai app.get
+        // (NiceHttp) agar TLS sama seperti request situs lain yang terbukti jalan di HP.
+        for (lang in listOf("en-US", "id-ID")) {
+            for (kind in kinds) {
+                try {
+                    val url =
+                        "https://api.themoviedb.org/3/search/$kind" +
+                                "?api_key=$TMDB_API_KEY&query=$q&language=$lang&include_adult=false&page=1"
+                    val text =
+                        withContext(Dispatchers.IO) {
+                            app.get(url, headers = mapOf("User-Agent" to BROWSER_UA)).text
                         }
-                        if (conn.responseCode != 200) {
-                            conn.disconnect()
-                            continue
-                        }
-                        val text = conn.inputStream.bufferedReader().readText()
-                        conn.disconnect()
-                        val obj = JSONObject(text)
-                        val arr = obj.optJSONArray("results") ?: continue
-                        for (i in 0 until arr.length()) {
-                            val item = arr.optJSONObject(i) ?: continue
-                            val backdrop =
-                                item.optString("backdrop_path").takeIf { it.isNotBlank() }
-                                    ?: continue
-                            return@withContext "https://image.tmdb.org/t/p/w1280$backdrop"
-                        }
-                    } catch (e: Throwable) {
-                        // coba kind berikutnya
+                    val obj = JSONObject(text)
+                    val arr = obj.optJSONArray("results") ?: continue
+                    for (i in 0 until arr.length()) {
+                        val item = arr.optJSONObject(i) ?: continue
+                        val backdrop =
+                            item.optString("backdrop_path").takeIf { it.isNotBlank() }
+                                ?: continue
+                        return "https://image.tmdb.org/t/p/w1280$backdrop"
                     }
+                } catch (e: Throwable) {
+                    // coba kombinasi berikutnya
                 }
-                null
             }
+        }
+        return null
+    }
 
     private suspend fun fetchAniListBanner(title: String, malId: Int?): String? =
             withContext(Dispatchers.IO) {
@@ -611,22 +605,65 @@ class SamehadakuProvider : MainAPI() {
         val normData = if (data.startsWith("http")) data else mainHost + (if (data.startsWith("/")) data else "/$data")
 
         if (normData.contains("samehadaku.how", ignoreCase = true)) {
-            // 1) SUMBER UTAMA: halaman episode samehadaku
+            // 1) SUMBER UTAMA: halaman episode samehadaku.
+            //    Bedakan URL langsung (file .mp4/.m3u8 yang bisa diputar
+            //    ExoPlayer) vs URL embed (halaman HTML yang harus lewat
+            //    extractor CloudStream). Embed yang dikembalikan apa adanya
+            //    sebagai VIDEO bakal Error 2001 (filedon/pixeldrain) / 3003 (mega).
             for (server in SamehadakuParser.episodeServers(normData)) {
-                if (server.embedUrl.contains("blogger.com", ignoreCase = true)) {
-                    Blogger().getUrl(server.embedUrl, server.referer) {
-                        links.add(it)
+                val u = server.embedUrl
+                when {
+                    u.contains("blogger.com", ignoreCase = true) -> {
+                        Blogger().getUrl(server.embedUrl, server.referer) {
+                            links.add(it)
+                        }
                     }
-                } else {
-                    links.add(
-                            newExtractorLink(
-                                    "Samehadaku",
-                                    server.label.ifBlank { "Mega" },
-                                    server.embedUrl,
-                                    ExtractorLinkType.VIDEO) {
-                                this.quality = server.quality
-                                this.referer = server.referer
-                            })
+                    u.contains("mega.nz", ignoreCase = true) -> {
+                        // Mega terenkripsi AES - TIDAK bisa diputar native.
+                        // Tetap ditambahkan terakhir (validasi isFileAlive)
+                        // untuk keperluan copy ke downloader, bukan untuk play utama.
+                        links.add(
+                                newExtractorLink(
+                                        "Samehadaku",
+                                        server.label.ifBlank { "Mega" },
+                                        server.embedUrl,
+                                        ExtractorLinkType.VIDEO) {
+                                    this.quality = server.quality
+                                    this.referer = server.referer
+                                })
+                    }
+                    // File video langsung: wibufile s0.*.mp4, dsb.
+                    u.substringBefore('?').endsWith(".mp4", true) ||
+                            u.substringBefore('?').endsWith(".m3u8", true) -> {
+                        links.add(
+                                newExtractorLink(
+                                        "Samehadaku",
+                                        server.label.ifBlank { "Samehadaku" },
+                                        u,
+                                        if (u.substringBefore('?').endsWith(".m3u8", true))
+                                            ExtractorLinkType.M3U8
+                                        else ExtractorLinkType.VIDEO) {
+                                    this.quality = server.quality
+                                    this.referer = server.referer
+                                })
+                    }
+                    // Embed lain (filedon, pixeldrain viewer, api.wibufile embed,
+                    // dsb.) -> lewat extractor bawaan CloudStream (Wibufile,
+                    // PixelDrain, StreamWish, dsb.). Bila tidak ada extractor
+                    // yang cocok (mis. filedon SPA), hasilnya kosong dan link
+                    // itu tidak ditampilkan - tidak memicu Error 2001.
+                    else -> {
+                        val collected = mutableListOf<ExtractorLink>()
+                        runCatching {
+                            loadExtractor(u, server.referer, subtitleCallback) { collected.add(it) }
+                        }
+                        for (c in collected) {
+                            if (c.quality == Qualities.Unknown.value) {
+                                c.quality = server.quality
+                            }
+                            links.add(c)
+                        }
+                    }
                 }
             }
         }
