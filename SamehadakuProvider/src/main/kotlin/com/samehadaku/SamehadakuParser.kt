@@ -28,13 +28,27 @@ internal object SamehadakuParser {
         val isMega: Boolean
             get() = embedUrl.contains("mega.nz", ignoreCase = true)
 
+        /**
+         * Resolusi untuk track/submenu di player CloudStream.
+         * [com.lagradost.cloudstream3.utils.ExtractorLink.quality] dibaca ExoPlayer
+         * sebagai track video terpisah - WAJIB beda per resolusi (480/720/1080/1440/2160),
+         * kalau semua Unknown maka player hanya menampilkan 1 track.
+         * Urutan dicek dari tertinggi, agar "2160" tidak ketangkap sebagai "160".
+         */
         val quality: Int
             get() =
                     when {
-                        label.contains("4k", true) -> Qualities.P2160.value
-                        label.contains("2160", true) -> Qualities.P2160.value
-                        label.contains("1080", true) -> Qualities.P1080.value
-                        label.contains("720", true) -> Qualities.P720.value
+                        label.contains("4k", true) ||
+                                label.contains("2160", true) ||
+                                label.contains("uhd", true) -> Qualities.P2160.value
+                        label.contains("2k", true) ||
+                                label.contains("1440", true) ||
+                                label.contains("qhd", true) -> Qualities.P1440.value
+                        label.contains("1080", true) ||
+                                label.contains("fullhd", true) -> Qualities.P1080.value
+                        label.contains("720", true) ||
+                                label.contains("mp4hd", true) ||
+                                label.contains("hd", true) -> Qualities.P720.value
                         label.contains("480", true) -> Qualities.P480.value
                         label.contains("360", true) -> Qualities.P360.value
                         else -> Qualities.Unknown.value
@@ -193,15 +207,25 @@ internal object SamehadakuParser {
                             ?: continue
             val url = src.trim().replace("&", "&")
             if (url.isEmpty()) continue
-            // Label server = teks di dalam div (mis. "Mega 1080p").
-            val label =
+            // Label server = teks PENUH di dalam div (mis. "Wibufile 720p",
+            // "Mega 1080p"). Dulu hanya kata pertama ("Wibufile") yang dipakai
+            // sehingga quality selalu Unknown dan resolusi tidak terpisah
+            // jadi track di player. Sekarang label penuh disimpan.
+            val fullText =
                     el.text()
                             .replace("&nbsp;", " ")
+                            .replace(Regex("""\s+"""), " ")
                             .trim()
-                            .split(Regex("""\s+"""))
-                            .firstOrNull { it.isNotEmpty() }
-                            .orEmpty()
                             .trim('"', '\'', ',', ';', ':')
+            // Ambil "Server Resolusi" saja (2 kata), buang sisa teks lain.
+            val label =
+                    Regex("""(?i)^(.*?)\s*(4k|2160p?|2k|1440p?|1080p?|720p?|480p?|360p?|uhd|qhd|full\s?hd|mp4\s?hd|hd)\b""")
+                            .find(fullText)
+                            ?.groupValues
+                            ?.let { (it.getOrNull(1).orEmpty() + " " + it.getOrNull(2).orEmpty()).trim() }
+                            ?.ifBlank { fullText }
+                            ?: fullText.takeIf { it.isNotEmpty() }
+                            ?: "Samehadaku"
             if (out.any { it.embedUrl == url }) continue
             out.add(Server(label.ifBlank { "Samehadaku" }, url, episodeUrl))
         }

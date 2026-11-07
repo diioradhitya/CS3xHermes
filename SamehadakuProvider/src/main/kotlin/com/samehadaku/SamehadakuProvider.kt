@@ -300,53 +300,73 @@ class SamehadakuProvider : MainAPI() {
                     .replace(Regex("\\s*(Sub|Subtitle)\\s*(Indonesia|indo)?\\s*$", RegexOption.IGNORE_CASE), "")
                     .trim()
 
-    /** Kartu listing (root & /anime-terbaru): h2.entry-title -> link series. */
+    private fun Element.posterSrc(): String? {
+        // Utama src, fallback lazy-load data-src / srcset (situs bisa ganti ke lazy)
+        val img = if (tagName().lowercase() == "img") this else selectFirst("img")
+        val src =
+                img?.attr("src")?.takeIf { it.isNotBlank() && !it.startsWith("data:") }
+                        ?: img?.attr("data-src")?.takeIf { it.isNotBlank() }
+                        ?: img?.attr("data-original")?.takeIf { it.isNotBlank() }
+                        ?: img?.attr("srcset")
+                                ?.split(',')
+                                ?.firstOrNull()
+                                ?.substringBefore(' ')
+                                ?.trim()
+                                ?.takeIf { it.isNotBlank() }
+                        ?: img?.absUrl("src")?.takeIf { it.isNotBlank() }
+        val trimmed = src?.trim()?.ifEmpty { null } ?: return null
+        return if (trimmed.startsWith("http")) trimmed else mainHost + (if (trimmed.startsWith("/")) trimmed else "/$trimmed")
+    }
+
+    /**
+     * Kartu listing /anime-terbaru/ SAJA (Tanpa widget Top 10).
+     * Dulu widget Top 10 digabung di sini sehingga tab Terbaru tercampur
+     * poster Top 10 (portrait seri yang jarang berubah) dan banner terasa
+     * tidak update. Top 10 punya tab sendiri (top10Results).
+     * Struktur terverifikasi dari homepage source Samehadaku:
+     * li > div.thumb > a[href=post episode] > img -300x169 (still episode,
+     * filename berubah per episode) + div.dtla > h2.entry-title > a[href=/anime/...]
+     */
     private fun Document.homeResults(): List<SearchResponse> {
         val out = mutableListOf<SearchResponse>()
         val seen = mutableSetOf<String>()
-
-        // Latest Episode section: div.latestepisode_widget > li[itemtype] > div.dtla > h2.entry-title > a
         for (a in select("h2.entry-title > a[href]")) {
             val url = seriesUrl(a.attr("href")) ?: continue
             if (!seen.add(url)) continue
             val title = cleanTitle(a.attr("title").ifBlank { a.text() }).ifEmpty { continue }
             val li = a.closest("li") ?: a.parent()
-            val img = li?.selectFirst("div.thumb img") ?: a.parents().firstOrNull { it.selectFirst("div.thumb img") != null }?.selectFirst("div.thumb img")
+            val imgEl =
+                    li?.selectFirst("div.thumb img")
+                            ?: a.parents().firstOrNull { it.selectFirst("div.thumb img") != null }
+                                    ?.selectFirst("div.thumb img")
             out.add(
                     newAnimeSearchResponse(title, url, TvType.Anime) {
-                        this.posterUrl = img?.attr("src")?.trim()?.ifEmpty { null }
+                        this.posterUrl = imgEl?.posterSrc()
                     })
         }
-
-        // Top 10 section: div.widget_senction.top10-section > ul > li > a.series[href*=/anime/]
-        val widget = selectFirst("div.widget_senction.top10-section")
-        if (widget != null) {
-            for (a in widget.select("a.series[href*=/anime/]")) {
-                val url = seriesUrl(a.attr("href")) ?: continue
-                if (!seen.add(url)) continue
-                val title = cleanTitle(a.attr("title").ifBlank { a.selectFirst("span.judul")?.text() ?: a.text() }).ifEmpty { continue }
-                val img = a.selectFirst("img")
-                out.add(
-                        newAnimeSearchResponse(title, url, TvType.Anime) {
-                            this.posterUrl = img?.attr("src")?.trim()?.ifEmpty { null }
-                        })
-            }
-        }
-
         return out
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val base = request.data
-        val (path, parser) = when (base) {
-            "top10" -> "/${if (page > 1) "page/$page/" else ""}" to { doc: Document -> doc.top10Results() }
-            "latest" -> "/${if (page > 1) "page/$page/" else ""}" to { doc: Document -> doc.latestResults() }
-            else -> // anime-terbaru
-                    (if (page > 1) "/anime-terbaru/page/$page/" else "/anime-terbaru/") to { doc: Document -> doc.homeResults() }
+        // Top 10 & Latest Episode widget di homepage TIDAK berpaginasi
+        // (widget sama di semua page) - hanya page 1 yang di-fetch.
+        // Terbaru (/anime-terbaru/) yang berpaginasi benar via /page/N/.
+        when (base) {
+            "top10" -> {
+                val doc = samehDoc("/", "entry-title")
+                return newHomePageResponse(request.name, doc.top10Results())
+            }
+            "latest" -> {
+                val doc = samehDoc("/", "entry-title")
+                return newHomePageResponse(request.name, doc.latestResults())
+            }
+            else -> {
+                val path = if (page > 1) "/anime-terbaru/page/$page/" else "/anime-terbaru/"
+                val doc = samehDoc(path, "entry-title")
+                return newHomePageResponse(request.name, doc.homeResults())
+            }
         }
-        val doc = samehDoc(path, "entry-title")
-        val results = parser(doc)
-        return newHomePageResponse(request.name, results)
     }
 
     // Parse Top 10 section dari root page (.widget_senction.top10-section)
@@ -359,7 +379,7 @@ class SamehadakuProvider : MainAPI() {
             val img = a.selectFirst("img")
             out.add(
                     newAnimeSearchResponse(title, url, TvType.Anime) {
-                        this.posterUrl = img?.attr("src")?.trim()?.ifEmpty { null }
+                        this.posterUrl = img?.posterSrc()
                     })
         }
         return out
@@ -378,7 +398,7 @@ class SamehadakuProvider : MainAPI() {
             val img = li.selectFirst("div.thumb img")
             out.add(
                     newAnimeSearchResponse(title, url, TvType.Anime) {
-                        this.posterUrl = img?.attr("src")?.trim()?.ifEmpty { null }
+                        this.posterUrl = img?.posterSrc()
                     })
         }
         return out
