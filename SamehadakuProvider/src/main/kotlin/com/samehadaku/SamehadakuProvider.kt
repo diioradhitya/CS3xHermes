@@ -10,8 +10,13 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withContext
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
 
 /**
  * Oploverz - katalog anime sub Indo. SUMBER UTAMA: v2.samehadaku.how.
@@ -102,27 +107,133 @@ class SamehadakuProvider : MainAPI() {
      * @param marker potongan HTML yang wajib ada supaya response dianggap
      * valid (mencegah 404/placeholder dianggap sukses).
      */
-    private suspend fun samehDoc(path: String, marker: String): Document {
+    private suspend fun samehDoc(path: String, marker: String): Document =
+            samehDocAny(path, listOf(marker))
+
+    /**
+     * Versi multi-marker: lolos kalau SALAH SATU marker ada di HTML.
+     * Halaman series punya "headline" (h1[itemprop=headline]) tapi halaman
+     * movie/post (mis. /chainsaw-man-reze-hen-movie/) TIDAK punya - hanya
+     * h1.entry-title + div#player-option. Marker tunggal "headline" bikin
+     * load() throw "marker 'headline' tidak ada" untuk movie.
+     */
+    private suspend fun samehDocAny(path: String, markers: List<String>): Document {
         var lastError: Throwable? = null
         for (attempt in 0..1) {
             try {
                 val doc =
                         app.get(mainHost + path, headers = mapOf("User-Agent" to BROWSER_UA))
                                 .document
-                if (doc.body() != null &&
-                                doc.html().contains(marker, ignoreCase = true)
-                ) {
+                val html = doc.html()
+                if (doc.body() != null && markers.any { html.contains(it, ignoreCase = true) }) {
                     return doc
                 }
-                lastError = IllegalStateException("marker '$marker' tidak ada: $path")
+                lastError = IllegalStateException("marker '${markers.joinToString("/")}' tidak ada: $path")
             } catch (e: Throwable) {
                 lastError = e
                 // network/TLS gagal: tunggu sebentar lalu coba sekali lagi
-                delay(700)
+                // (perhatikan: error marker TIDAK melempar langsung, di-retry
+                // agar Cloudflare transien tidak dianggap halaman hilang)
+                if (e is IllegalStateException && e.message?.contains("marker") == true) {
+                    delay(500)
+                } else {
+                    delay(700)
+                }
             }
         }
         throw lastError ?: Exception("samehadaku: $path gagal diakses")
     }
+
+    /**
+     * Banner/background 16:9 berkualitas.
+     * 1) TMDB (api.themoviedb.org) bila [TMDB_API_KEY] diisi - ambil dari
+     *    https://www.themoviedb.org/settings/api (gratis), isi konstanta di
+     *    bawah. Tanpa key, langkah ini dilewati.
+     * 2) AniList GraphQL (tanpa key) bannerImage - kualitas backdrop sama
+     *    seperti TMDB, dipakai sebagai fallback otomatis.
+     */
+    private val TMDB_API_KEY = "" // isi API key TMDB di sini untuk banner TMDB
+
+    private suspend fun fetchBanner(title: String, malId: Int?, type: TvType): String? {
+        // 1) TMDB bila API key dikonfigurasi
+        if (TMDB_API_KEY.isNotBlank()) {
+            runCatching { fetchTmdbBackdrop(title, type) }?.getOrNull()?.let { return it }
+        }
+        // 2) AniList (tanpa key) - bannerImage
+        runCatching { fetchAniListBanner(title, malId) }?.getOrNull()?.let { return it }
+        return null
+    }
+
+    private suspend fun fetchTmdbBackdrop(title: String, type: TvType): String? =
+            withContext(Dispatchers.IO) {
+                val q = java.net.URLEncoder.encode(title, "UTF-8")
+                val kind = if (type == TvType.AnimeMovie || type == TvType.Movie) "movie" else "tv"
+                // search multi dulu (anime bisa movie/tv), fallback ke kind
+                val url = URL(
+                    "https://api.themoviedb.org/3/search/$kind" +
+                            "?api_key=$TMDB_API_KEY&query=$q&language=id-ID&include_adult=false&page=1"
+                )
+                val conn = url.openConnection() as HttpURLConnection
+                conn.apply {
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", BROWSER_UA)
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                val text = conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+                val obj = JSONObject(text)
+                val arr = obj.optJSONArray("results") ?: return@withContext null
+                for (i in 0 until arr.length()) {
+                    val item = arr.optJSONObject(i) ?: continue
+                    val backdrop = item.optString("backdrop_path").takeIf { it.isNotBlank() }
+                        ?: continue
+                    return@withContext "https://image.tmdb.org/t/p/w1280$backdrop"
+                }
+                null
+            }
+
+    private suspend fun fetchAniListBanner(title: String, malId: Int?): String? =
+            withContext(Dispatchers.IO) {
+                val query: String
+                val variables: org.json.JSONObject
+                if (malId != null) {
+                    query =
+                        "query (\$id: Int) { Media(idMal: \$id, type: ANIME) { bannerImage } }"
+                    variables = JSONObject().put("id", malId)
+                } else {
+                    val esc = title.replace("\"", "").trim()
+                    if (esc.isBlank()) return@withContext null
+                    query =
+                        "query (\$s: String) { Media(search: \$s, type: ANIME, sort: SEARCH_MATCH) { bannerImage } }"
+                    variables = JSONObject().put("s", esc)
+                }
+                val body = JSONObject()
+                    .put("query", query)
+                    .put("variables", variables)
+                    .toString()
+                val conn = URL("https://graphql.anilist.co").openConnection() as HttpURLConnection
+                conn.apply {
+                    requestMethod = "POST"
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("User-Agent", BROWSER_UA)
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
+                conn.outputStream.flush()
+                conn.outputStream.close()
+                val text = conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+                val banner = JSONObject(text)
+                    .optJSONObject("data")
+                    ?.optJSONObject("Media")
+                    ?.optString("bannerImage")
+                    ?.takeIf { it.isNotBlank() }
+                banner
+            }
 
     /**
      * Ambil halaman episode-fallback dari host Oploverz, failover antar
@@ -268,10 +379,13 @@ class SamehadakuProvider : MainAPI() {
         val slug = query.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
         if (slug.isNotEmpty()) {
             runCatching {
-                val doc = samehDoc("/anime/$slug/", "headline")
+                val doc = samehDocAny("/anime/$slug/", listOf("headline", "entry-title", "player-option"))
                 val name =
                         cleanTitle(
-                                doc.selectFirst("h1[itemprop=headline]")?.text() ?: "")
+                                doc.selectFirst("h1[itemprop=headline]")?.text()
+                                        ?: doc.selectFirst("h1.entry-title")?.text()
+                                        ?: doc.selectFirst("h1")?.text()
+                                        ?: "")
                 if (name.isNotEmpty()) {
                     out.add(
                             newAnimeSearchResponse(
@@ -312,10 +426,17 @@ class SamehadakuProvider : MainAPI() {
                 if (url.startsWith("http"))
                     url.substringAfter("://").substringAfter('/').let { "/$it" }
                 else url
-        val doc = samehDoc(if (path.endsWith("/")) path else "$path/", "headline")
+        val doc =
+                samehDocAny(
+                        if (path.endsWith("/")) path else "$path/",
+                        listOf("headline", "entry-title", "player-option"))
 
         val title =
-                cleanTitle(doc.selectFirst("h1[itemprop=headline]")?.text().orEmpty())
+                cleanTitle(
+                                doc.selectFirst("h1[itemprop=headline]")?.text()
+                                        ?: doc.selectFirst("h1.entry-title")?.text()
+                                        ?: doc.selectFirst("h1")?.text()
+                                        ?: "")
                         .ifEmpty { url.trimEnd('/').substringAfterLast('/') }
 
         // kartu detail utama: div.card yang punya img poster (w-48 aspect-[3/4])
@@ -355,7 +476,16 @@ class SamehadakuProvider : MainAPI() {
                             ?.text()
                             .orEmpty()
         }
-        val type = getType(typeText)
+        // Halaman movie/post (mis. /chainsaw-man-reze-hen-movie/) TIDAK punya
+        // info Type/Status, TAPI punya div#player-option langsung di halaman
+        // itu. Kalau dikenali sebagai movie, paksa AnimeMovie supaya
+        // loadLinks dipanggil dengan dataUrl = halaman movie itu sendiri.
+        val isMoviePage =
+                path.contains("-movie", ignoreCase = true) ||
+                        doc.select("div[id^=player-option-]").isNotEmpty()
+        val type =
+                if (isMoviePage) TvType.AnimeMovie
+                else getType(typeText.ifEmpty { if (isMoviePage) "Movie" else "" })
 
         // baris episode: link ke post "<seriesSlug>-episode-<N>/".
         // Saring dengan prefix slug series supaya widget episode ANIME LAIN di
@@ -404,13 +534,18 @@ class SamehadakuProvider : MainAPI() {
                 runCatching { APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), null, true) }
                         .getOrNull()
 
+        // Banner 16:9: TMDB (bila API key diisi) else AniList bannerImage,
+        // fallback ke cover MAL. Ini yang tampil sebagai background di app.
+        val banner = fetchBanner(title, tracker?.malId, type) ?: tracker?.cover
+
         // Film: kalau halamannya punya baris episode (biasanya 1), jadikan
         // dataUrl supaya loadLinks ambil player dari post episode.
+        // Khusus halaman movie/post, dataUrl = url sendiri (player ada di halaman itu).
         if (type == TvType.AnimeMovie || type == TvType.Movie) {
-            val dataUrl = epItems.firstOrNull()?.first ?: url
+            val dataUrl = if (isMoviePage) url else (epItems.firstOrNull()?.first ?: url)
             return newMovieLoadResponse(name = title, url = url, type = type, dataUrl = dataUrl) {
                 posterUrl = tracker?.image ?: poster
-                backgroundPosterUrl = tracker?.cover
+                backgroundPosterUrl = banner
                 this.year = year
                 this.plot = plot
                 this.tags =
@@ -422,7 +557,7 @@ class SamehadakuProvider : MainAPI() {
 
         return newAnimeLoadResponse(title, url, type) {
             posterUrl = poster ?: tracker?.image
-            backgroundPosterUrl = tracker?.cover
+            backgroundPosterUrl = banner
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = getStatus(statusText)
