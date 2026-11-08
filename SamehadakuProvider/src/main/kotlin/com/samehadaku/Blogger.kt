@@ -51,6 +51,10 @@ class Blogger {
                             .replace("\\u003d", "=")
                             .replace("\\u0022", "\"")
                             .replace("\\/", "/")
+                    // Match membawa backslash terakhir dari \" (escape quote di JSON
+                    // sebelum separator ",[). Backslash itu merusak nilai lsig di
+                    // akhir query -> Google balas 403. Buang backslash di ujung.
+                    url = url.trimEnd('\\')
                     if (url.isNotEmpty()) {
                         val quality =
                                 when {
