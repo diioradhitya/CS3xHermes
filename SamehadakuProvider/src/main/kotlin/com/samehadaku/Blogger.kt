@@ -29,9 +29,16 @@ class Blogger {
                         .get()
 
                 val html = doc.html()
-                // Cari URL GoogleVideo (googlevideo.com/videoplayback)
+                // Cari URL GoogleVideo (googlevideo.com/videoplayback).
+                // PENTING: URL di halaman berbentuk unicode-escape
+                // (expire\u003d1794... \u0026dst.) sehingga karakter \ HARUS
+                // dibolehkan di regex lalu di-decode. Kalau backslash dikecualikan
+                // seperti sebelumnya ([^"'\s\\<>]), match berhenti di \ pertama
+                // dan URL terpotong (expire tanpa =/itag) -> ExoPlayer Error 2004.
+                // Separator antar-URL memakai &quot; (entity) sehingga &
+                // dikecualikan agar match tidak membentang ke URL berikutnya.
                 val urlRegex =
-                        """https://[^"'\s\\<>]*googlevideo\.com/videoplayback[^"'\s\\<>]*""".toRegex()
+                        """https://[^\s"'<>&]*googlevideo\.com/videoplayback[^\s"'<>&]*""".toRegex()
                 val found = urlRegex.findAll(html)
 
                 for (m in found) {
