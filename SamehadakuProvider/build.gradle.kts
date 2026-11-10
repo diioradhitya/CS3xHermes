@@ -1,4 +1,4 @@
-version = 28
+version = 29
 
 cloudstream {
     description = "SamehadakuxHermes - Anime Sub Indo. Sumber utama: v2.samehadaku.how (Top 10 / Terbaru tabs, Blogger multi-itag + Mega 480-4K, validator link hidup); fallback video: oploverz.am/.ch."
