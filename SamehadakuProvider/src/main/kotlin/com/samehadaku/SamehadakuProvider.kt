@@ -680,13 +680,15 @@ class SamehadakuProvider : MainAPI() {
                     }
                     // Embed lain (filedon, pixeldrain viewer, api.wibufile embed,
                     // dsb.) -> lewat extractor bawaan CloudStream (Wibufile,
-                    // PixelDrain, StreamWish, dsb.). Bila tidak ada extractor
-                    // yang cocok (mis. filedon SPA), hasilnya kosong dan link
-                    // itu tidak ditampilkan - tidak memicu Error 2001.
+                    // PixelDrain, StreamWish, dsb.). Untuk filedon, coba juga
+                    // extractor custom (embed sering domain-restricted/SPA).
                     else -> {
                         val collected = mutableListOf<ExtractorLink>()
                         runCatching {
                             loadExtractor(u, server.referer, subtitleCallback) { collected.add(it) }
+                        }
+                        if (collected.isEmpty() && u.contains("filedon", ignoreCase = true)) {
+                            runCatching { Filedon().extract(u, server.referer) { collected.add(it) } }
                         }
                         for (c in collected) {
                             if (!seenUrls.add(c.url)) continue
