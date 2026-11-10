@@ -73,7 +73,9 @@ class Blogger {
                                         ExtractorLinkType.VIDEO
                                 ) {
                                     this.quality = quality
-                                    this.referer = referer ?: embedUrl
+                                    // googlevideo membatasi referer; pakai origin Blogger
+                                    // agar tidak 403 seperti saat referer = halaman Samehadaku.
+                                    this.referer = "https://www.blogger.com/"
                                 })
                     }
                 }

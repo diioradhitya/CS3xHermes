@@ -638,6 +638,12 @@ class SamehadakuProvider : MainAPI() {
                             if (c.quality == Qualities.Unknown.value) {
                                 c.quality = server.quality
                             }
+                            // googlevideo/blogger stream butuh referer Blogger (atau
+                            // tanpa referer Samehadaku) - referer halaman episode
+                            // sering memicu 403 (ERROR_CODE_IO_BAD_HTTP_STATUS 2004).
+                            if (c.url.contains("googlevideo.com", ignoreCase = true)) {
+                                c.referer = "https://www.blogger.com/"
+                            }
                             links.add(c)
                         }
                     }
