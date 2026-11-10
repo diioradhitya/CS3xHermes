@@ -38,7 +38,12 @@ object Mega {
                 conn.outputStream.close()
                 val resp = conn.inputStream.bufferedReader().readText()
                 conn.disconnect()
-                resp.contains("\"g\"") && !resp.contains("[-9]") && !resp.contains("[-11]")
+                // Hanya buang kalau jelas error file tidak ada/dihapus
+                if (resp.contains("[-9]") || resp.contains("[-11]")) return@withContext false
+                if (resp.contains("\"g\"")) return@withContext true
+                // API merespons lain (mis. beda format) -> lebih baik tetap
+                // tampilkan (validasi tidak memblokir total)
+                true
             } catch (_: Exception) {
                 true // API tidak bisa diakses, anggap hidup
             }

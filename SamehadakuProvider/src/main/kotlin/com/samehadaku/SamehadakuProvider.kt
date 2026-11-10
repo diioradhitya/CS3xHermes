@@ -621,13 +621,17 @@ class SamehadakuProvider : MainAPI() {
                 val u = server.embedUrl
                 when {
                     u.contains("blogger.com", ignoreCase = true) -> {
-                        // Pakai extractor Blogger bawaan CloudStream (parse JSON
-                        // "streams":[..] di script tag). Extractor regex custom
-                        // lama ikut mengambil URL SABR tanpa itag (Error 3003)
-                        // dan URL yang kena 403 di ExoPlayer.
+                        // Coba extractor Blogger bawaan CloudStream dulu, kalau tidak
+                        // ada hasil fallback ke extractor custom (token /video.g
+                        // kadang tidak ter-parse oleh bawaan di beberapa build).
                         val collected = mutableListOf<ExtractorLink>()
                         runCatching {
                             loadExtractor(u, server.referer, subtitleCallback) { collected.add(it) }
+                        }
+                        if (collected.isEmpty()) {
+                            runCatching {
+                                Blogger().getUrl(u, server.referer) { collected.add(it) }
+                            }
                         }
                         for (c in collected) {
                             if (!seenUrls.add(c.url)) continue
