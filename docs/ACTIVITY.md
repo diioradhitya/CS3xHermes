@@ -475,3 +475,110 @@ ClassNotFoundException: Didn't find class "com.loklok.LoklokPlugin"
   `Range: bytes=0-65535` dan jeda antar-request.
 - Playback **belum** dikonfirmasi di perangkat. Yang terbukti: request chain
   benar dan provider mengeluarkan URL yang benar-benar bisa diunduh.
+
+---
+
+## 12 Nov 2026 — Samehadaku v33–v35: bersih-bersih Oploverz, akar masalah 403 Blogger, parser Mega (dekripsi E2E)
+
+### 1. Pembersihan sisa Oploverz
+
+`OploverzProvider` sudah dihapus lebih dulu, tapi `SamehadakuProvider` masih
+menyimpan jalur fallback Oploverz (browse dari samehadaku, video dari
+oploverz). Semua sisa itu dihapus:
+
+- `SamehadakuProvider.kt`: `oplHosts`, `oplHostIndex`, `oplDoc()`, dan blok
+  "FALLBACK / TAMBAHAN: embedder bawaan Oploverz" di `loadLinks`.
+- `SamehadakuParser.kt`: `parseOploverzEpisode()`, `guessEpisode()`,
+  `resolveEpisode()`, `findEpisodeInAnime()`, `episodeNumber()`, `slugify()`.
+- Deskripsi di `build.gradle.kts` + `builds/plugins.json` (tidak lagi
+  menyebut "fallback video: oploverz.am/.ch").
+- Import `withTimeout` jadi yatim -> ikut dibuang.
+
+### 2. Akar masalah 403 googlevideo (bukan parsing CloudStream)
+
+Gejala: link Blogger `itag=18` (progresif mp4) selalu dibalas **403 /
+ERROR_CODE_IO_BAD_HTTP_STATUS (2004)**, sedangkan varian SABR (tanpa `itag`)
+berhasil diekstrak tapi tidak bisa diparse ExoPlayer (3003).
+
+Investigasi:
+
+1. URL yang dipakai device **valid**, bukan salah parse. Dibuktikan dengan
+   mengambil `blogger.com/video.g` -> `streamingData` -> URL `itag=18` ->
+   `curl` dari mesin yang IP publiknya sama dengan `ip=` di URL
+   (`157.85.210.128`): **206 Partial Content, `video/mp4`**.
+2. Penyebab 403 pada pengujian sebelumnya = **URL kedaluwarsa** + **pemblokiran
+   IP sementara**. `expire` di URL = `met` + 8 jam; saat diuji ulang, URL lama
+   sudah lewat masa berlaku dan Google membalas 403.，有些人AREDirectly
+   memblokir IP setelah banyak request `videoplayback` beruntun (jam-jam
+   pengujian ulang).
+3. Header tidak berpengaruh: plain / UA Android / `Referer: blogger.com` /
+   `Origin: blogger.com` semuanya 403 pada URL yang sama, dan semuanya 206
+   pada URL segar. Jadi `referer` tidak perlu disetel untuk Googlevideo.
+
+Perubahan:
+
+- `Blogger.kt`: hanya URL **progresif** (punya `itag=`) yang diambil, dedup per
+  `(id video, itag)`. URL SABR dibuang -> tidak lagi memicu 3003.
+- `SamehadakuProvider.kt`: link `googlevideo.com` **tidak divalidasi** lagi.
+  Validasi = 1 request tambahan per link ke `videoplayback`, yang justru
+  membantu memicu pemblokiran IP dan membuat link baik dianggap mati.
+
+### 3. Parser Mega (file terenkripsi E2E)
+
+File `mega.nz/embed/<id>#<key>` tidak bisa diputar ExoPlayer: isinya dienkripsi
+end-to-end. Yang diperlukan:
+
+- **API**: `POST https://g.api.mega.co.nz/cs` body
+  `[{"a":"g","g":1,"p":"<fileId>"}]` -> `[{"s":<ukuran>,"at":<atribut terenkripsi>,"g":<url download>}]`.
+  (Bentuk lama `{"a":"g","ids":[...]}` / `cs?id=..&n=..&k=..` selalu `-2`.)
+- **Atribut** (nama file): AES-128-CBC, IV nol, key = `fileKey[0..3] XOR
+  fileKey[4..7]`, hasil JSON mulai byte ke-4.
+- **Isi file**: AES-128-CTR, key sama seperti di atas, counter awal =
+  `((fileKey[4] << 32) + fileKey[5]) << 64`. Karena CTR adalah stream cipher
+  per blok 16 byte, range mana pun bisa didekripsi dengan menggeser counter
+  (`offset` harus dibulatkan ke batas blok lalu byte sisanya dibuang).
+
+Implementasi:
+
+- `Mega.kt`: `resolve()` (API + dekripsi atribut), `parseLink()`, helper
+  base64url murni Kotlin (tanpa `android.util.Base64` supaya jalan di minSdk 21
+  dan bisa diuji di JVM).
+- `MegaProxy.kt`: server HTTP lokal di `127.0.0.1` (port acak, token acak per
+  file). Menerjemahkan `Range` ExoPlayer ke `Range` ke server MEGA,
+  mendekripsi, lalu mengirim `206 Partial Content` + `Content-Range`.
+  Request tanpa `Range` (mis. pemuat preview thumbnail) dibatasi 4 MB supaya
+  tidak menarik seluruh file (1–2 GB).
+- `SamehadakuProvider.kt`: link Mega yang bisa di-resolve diganti dengan URL
+  proxy lokal; file yang sudah mati (`-2`/`-6`/`-16`) tidak lagi ditawarkan
+  (sebelumnya memicu 3003).
+
+### Verifikasi
+
+- **Harness JVM** (`/tmp/opencode/ktest`, Gradle + Kotlin JVM, sumber plugin
+  yang sama persis) terhadap file Mega nyata
+  (`mega.nz/embed/FdNjQJgS#...`, 78.469.819 B, `STnO-U17-KMK-07-480p-SAMEHADAKU.CARE.mp4`):
+  - `Range: bytes=0-1023` -> `206`, 1024 B, header `00 00 00 18 ftyp isom` (MP4 valid).
+  - `Range: bytes=1000003-1001002` (offset tidak kelipatan 16) -> `206`, 1000 B,
+    sha256 `e87d1125…ba641` **cocok byte-per-byte** dengan implementasi Python
+    independen.
+  - `HEAD` -> `206` + `Content-Range: bytes 0-1023/78469819`, `Content-Type: video/mp4`.
+  - Tanpa `Range` -> `206`, `Content-Length: 4194304`, `Content-Range: bytes 0-4194303/78469819`.
+- Kernergi: `/root/.gradle` tidak punya `kotlin-reflect`; harness pakai
+  proyek Gradle terpisah (`kotlin("jvm") 2.4.10`) yang menarik plugin dari
+  Maven Central.
+- Artefak: `SamehadakuProvider.cs3` 61.565 B,
+  sha256 `61fff8c8cd6cce4366efabb6702c43c63f9ebcd23112da9d1d3e193b7e8ec184`
+  (`builds/plugins.json` v35).
+
+### Catatan
+
+- **Belum dikonfirmasi di perangkat**: saat pekerjaan ini.device tidak bisa
+  dihubungi (`192.168.100.53` tidak merespons, tidak ada port ADB terbuka).
+  Uji perangkat (install v35 + playback episode dengan server Mega) masih
+  perlu dilakukan.
+- Status file per episode berbeda: sebagian file Mega membalas `-6`
+  (Black Clover S2) atau `-16` (Kikansha S2) -> file itu tidak bisa diputar
+  dari mana pun, bukan karena parser.
+- Raw GitHub sempat menyajikan manifest lama (v33) sementara `.cs3` sudah v35
+  (cache CDN async) -> pakai `cdn.jsdelivr.net` sebagai pembanding, atau
+  tunggu propagasi raw.
