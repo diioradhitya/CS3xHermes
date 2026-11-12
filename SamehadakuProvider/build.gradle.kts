@@ -1,7 +1,7 @@
-version = 32
+version = 33
 
 cloudstream {
-    description = "SamehadakuxHermes - Anime Sub Indo. Sumber utama: v2.samehadaku.how (Top 10 / Terbaru tabs, Blogger multi-itag + Mega 480-4K, validator link hidup); fallback video: oploverz.am/.ch."
+    description = "SamehadakuxHermes - Anime Sub Indo dari v2.samehadaku.how (tab Terbaru + Top Minggu, film & series, server Blogspot multi-itag + VIP Streaming (Filedon) + Mega 480p-4K, validator link hidup)."
     language = "id"
     authors = listOf("Dio R")
     status = 1

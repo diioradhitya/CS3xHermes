@@ -40,6 +40,9 @@ class Blogger {
                 val urlRegex =
                         """https://[^\s"'<>&]*googlevideo\.com/videoplayback[^\s"'<>&]*""".toRegex()
                 val found = urlRegex.findAll(html)
+                // Halaman Blogger memuat URL yang sama beberapa kali (beda
+                // signature) -> cukup satu per (id video, itag).
+                val seen = mutableSetOf<String>()
 
                 for (m in found) {
                     var url = m.value
@@ -55,29 +58,37 @@ class Blogger {
                     // sebelum separator ",[). Backslash itu merusak nilai lsig di
                     // akhir query -> Google balas 403. Buang backslash di ujung.
                     url = url.trimEnd('\\')
-                    if (url.isNotEmpty()) {
-                        val quality =
-                                when {
-                                    url.contains("itag=22") -> 720
-                                    url.contains("itag=18") -> 360
-                                    url.contains("itag=137") -> 1080
-                                    url.contains("itag=136") -> 720
-                                    url.contains("itag=135") -> 480
-                                    else -> Qualities.Unknown.value
-                                }
-                        callback(
-                                newExtractorLink(
-                                        "Blogger",
-                                        "Blogger",
-                                        url,
-                                        ExtractorLinkType.VIDEO
-                                ) {
-                                    this.quality = quality
-                                    // googlevideo membatasi referer; pakai origin Blogger
-                                    // agar tidak 403 seperti saat referer = halaman Samehadaku.
-                                    this.referer = "https://www.blogger.com/"
-                                })
-                    }
+                    if (url.isEmpty()) continue
+
+                    // Hanya format progresif (ada itag). URL SABR (sabr=1 tanpa
+                    // itag) bukan file video -> ExoPlayer gagal parse (3003).
+                    val itag = Regex("""itag=(\d+)""").find(url)?.groupValues?.get(1)?.toIntOrNull()
+                            ?: continue
+                    val videoId =
+                            Regex("""id=([\w-]+)""").find(url)?.groupValues?.get(1) ?: url
+                    if (!seen.add("$videoId|$itag")) continue
+
+                    val quality =
+                            when (itag) {
+                                22, 136 -> 720
+                                18 -> 360
+                                137 -> 1080
+                                135 -> 480
+                                313, 271 -> 2160
+                                else -> Qualities.Unknown.value
+                            }
+                    callback(
+                            newExtractorLink(
+                                    "Blogger",
+                                    "Blogger",
+                                    url,
+                                    ExtractorLinkType.VIDEO
+                            ) {
+                                this.quality = quality
+                                // googlevideo membatasi referer; pakai origin Blogger
+                                // agar tidak 403 seperti saat referer = halaman Samehadaku.
+                                this.referer = "https://www.blogger.com/"
+                            })
                 }
             } catch (e: Exception) {
                 // gagal extract, biarkan kosong

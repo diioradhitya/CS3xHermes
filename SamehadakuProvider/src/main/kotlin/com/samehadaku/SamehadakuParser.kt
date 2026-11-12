@@ -6,15 +6,15 @@ import kotlinx.coroutines.delay
 import org.jsoup.Jsoup
 
 /**
- * Sumber video alternatif: samehadaku.how
+ * Parser server video untuk samehadaku.how
  *
- * Situs Oploverz hanya menyediakan satu embedder per episode (Blogger 360p
- * atau UpBolt 360p/480p). Samehadaku menyediakan beberapa server:
+ * Samehadaku menyediakan beberapa server per episode:
  *   - "Blogspot"  -> iframe blogger.com (bisa 360p/720p/1080p)
- *   - "Mega 480p" / "Mega 720p" / "Mega 1080p" -> mega.nz/embed/...
+ *   - "VIP STREAMING" -> iframe filedon.co
+ *   - "Mega 480p" / "Mega 720p" / "Mega 1080p" / "Mega 4K" -> mega.nz/embed/...
  *
- * Modul ini memetakan episode Oploverz ke episode Samehadaku berdasarkan
- * judul anime + nomor episode, lalu mengembalikan daftar server yang tersedia.
+ * Modul ini mengubah markup halaman episode (div#player-option-N) menjadi
+ * daftar server yang bisa dipakai provider.
  */
 internal object SamehadakuParser {
     const val BASE = "https://v2.samehadaku.how"
@@ -69,113 +69,6 @@ internal object SamehadakuParser {
                         else -> Qualities.Unknown.value
                     }
     }
-
-    /** Ambil judul anime + nomor episode dari halaman episode Oploverz. */
-    fun parseOploverzEpisode(doc: org.jsoup.nodes.Document, url: String): Pair<String, Int>? {
-        val h1 = doc.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
-        // Judul Oploverz: "Bleach Episode 373 Subtitle Indonesia"
-        val m = Regex("""^(.*?)\s+Episode\s+(\d+)""", RegexOption.IGNORE_CASE).find(h1)
-        if (m != null) {
-            val title = m.groupValues[1].trim()
-            val num = m.groupValues[2].toIntOrNull()
-            if (title.isNotEmpty() && num != null) return title to num
-        }
-        // Fallback: dari URL episode
-        val um = Regex("""-episode-(\d+)""").find(url)
-        val num = um?.groupValues?.get(1)?.toIntOrNull() ?: return null
-        val slug = url.substringAfterLast("/").substringBefore("-episode-")
-        val title = slug.replace("-", " ").trim()
-        if (title.isEmpty()) return null
-        return title to num
-    }
-
-
-    /**
-     * Tebak cepat URL episode samehadaku dari slug episode Oploverz.
-     * Oploverz: "/<slug>-episode-<N>-subtitle-indonesia/"
-     * Samehadaku: "/<slug>-episode-<N>/"
-     * Kalau slug-nya sama (umumnya), 1 request cukup - tidak perlu pencarian.
-     */
-    suspend fun guessEpisode(oploverzUrl: String, number: Int): String? {
-        val path = oploverzUrl.substringAfterLast("/").substringBefore("?")
-        val slug = path.substringBefore("-episode-").trim('-')
-        if (slug.isEmpty()) return null
-        for (n in listOf(number.toString(), number.toString().padStart(2, '0'))) {
-            val guess = "$BASE/$slug-episode-$n/"
-            try {
-                val body = app.get(guess, headers = mapOf("User-Agent" to BROWSER_UA)).text
-                if (body.contains("player-option")) return guess
-            } catch (e: Throwable) {
-                // slug berbeda -> caller pakai jalur pencarian
-            }
-        }
-        return null
-    }
-
-    /** Cari URL halaman episode di Samehadaku. Null kalau tidak ada. */
-    suspend fun resolveEpisode(title: String, number: Int): String? {
-        val q = java.net.URLEncoder.encode(title, "UTF-8")
-        val searchHtml =
-                try {
-                    app.get("$BASE/?s=$q", headers = mapOf("User-Agent" to BROWSER_UA)).text
-                } catch (e: Throwable) {
-                    return null
-                }
-        val links =
-                Regex("""href="(https://v2\.samehadaku\.how/[^"#?]+)"""")
-                        .findAll(searchHtml)
-                        .map { it.groupValues[1] }
-                        .toList()
-                        .distinct()
-
-        // 1) hasil pencarian langsung ke halaman episode
-        for (l in links) {
-            val n = episodeNumber(l) ?: continue
-            if (n == number) return l
-        }
-        // 2) lewat halaman anime: cari episode bernomor sama
-        for (anime in links.filter { it.contains("/anime/") }.take(3)) {
-            val ep = findEpisodeInAnime(anime, number)
-            if (ep != null) return ep
-        }
-        // 3) tebak slug episode langsung
-        val slug = slugify(title)
-        val guess = "$BASE/$slug-episode-$number/"
-        return try {
-            val r = app.get(guess, headers = mapOf("User-Agent" to BROWSER_UA))
-            if (r.text.contains("player-option")) guess else null
-        } catch (e: Throwable) {
-            null
-        }
-    }
-
-    private suspend fun findEpisodeInAnime(animeUrl: String, number: Int): String? {
-        val html =
-                try {
-                    app.get(animeUrl, headers = mapOf("User-Agent" to BROWSER_UA)).text
-                } catch (e: Throwable) {
-                    return null
-                }
-        val links =
-                Regex("""href="(https://v2\.samehadaku\.how/[^"#?]+-episode-\d+/)"""")
-                        .findAll(html)
-                        .map { it.groupValues[1] }
-                        .toList()
-                        .distinct()
-        for (l in links) {
-            if (episodeNumber(l) == number) return l
-        }
-        return null
-    }
-
-    private fun episodeNumber(url: String): Int? =
-            Regex("""-episode-(\d+)""").find(url)?.groupValues?.get(1)?.toIntOrNull()
-
-    private fun slugify(title: String): String =
-            title
-                    .lowercase()
-                    .replace(Regex("""[^a-z0-9]+"""), "-")
-                    .trim('-')
 
     /** Parse daftar server (Blogger + Mega) dari halaman episode Samehadaku. */
     suspend fun episodeServers(episodeUrl: String): List<Server> {

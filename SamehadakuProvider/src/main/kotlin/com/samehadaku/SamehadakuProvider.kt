@@ -9,7 +9,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withContext
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -19,15 +18,11 @@ import java.net.URL
 import org.json.JSONObject
 
 /**
- * Oploverz - katalog anime sub Indo. SUMBER UTAMA: v2.samehadaku.how.
+ * Samehadaku - katalog anime sub Indo (v2.samehadaku.how).
  *
- * Per 23-10-2026 situs oploverz.am sedang migrasi tema/domain (wp-json
- * memakai nama "oploverz.best"): listing /anime/ 404, permalink halaman
- * series massal 404/301 ke post episode, hasil search hanya 10 skeleton
- * JS. Karplugnya sumber browse (home/search/load) dipindah ke
- * v2.samehadaku.how (katalog anime sub Indo hampir sama), sedangkan
- * host Oploverz tetap dipakai sebagai FALLBACK sumber video di
- * loadLinks (post episode /slug-episode-N-subtitle-indonesia/ masih hidup).
+ * Sumber browse (home/search/load) dan sumber video (loadLinks) semuanya
+ * dari v2.samehadaku.how. Server video per episode: Blogspot (blogger.com,
+ * multi itag), VIP Streaming (filedon.co) dan Mega (480p/720p/1080p/4K).
  *
  * Markup samehadaku (tema Tailwind, BUKAN Madara - jangan pakai classes
  * eplister/bs/bixbox):
@@ -57,17 +52,6 @@ class SamehadakuProvider : MainAPI() {
 
     /** Situs utama (browse: home/search/load). */
     private val mainHost = "https://v2.samehadaku.how"
-
-    /** Host lama Oploverz - fallback sumber video di loadLinks. */
-    private val oplHosts =
-            listOf(
-                    "https://oploverz.am",
-                    "https://oploverz.ch",
-                    "https://oploverz.site"
-            )
-
-    /** Index host Oploverz yang terakhir berhasil. */
-    @Volatile private var oplHostIndex = 0
 
     override var mainUrl: String = mainHost
 
@@ -246,32 +230,6 @@ class SamehadakuProvider : MainAPI() {
                     ?.takeIf { it.isNotBlank() }
                 banner
             }
-
-    /**
-     * Ambil halaman episode-fallback dari host Oploverz, failover antar
-     * domain (alur lama, dipakai untuk embedder bawaan Oploverz).
-     */
-    private suspend fun oplDoc(path: String, marker: String): Document {
-        var lastError: Throwable? = null
-        for (offset in oplHosts.indices) {
-            val idx = (oplHostIndex + offset) % oplHosts.size
-            val host = oplHosts[idx]
-            // URL absolut dipakai apa adanya (bukan ditukar host), supaya
-            // halaman yang diketahui dari domain lain tidak diambil dari
-            // domain yang salah.
-            val target = if (path.startsWith("http")) path else host + path
-            try {
-                val doc = app.get(target, headers = mapOf("User-Agent" to BROWSER_UA)).document
-                if (doc.body() != null && doc.html().contains(marker, ignoreCase = true)) {
-                    oplHostIndex = idx
-                    return doc
-                }
-            } catch (e: Throwable) {
-                lastError = e
-            }
-        }
-        throw lastError ?: Exception("oploverz: semua domain gagal diakses")
-    }
 
     private fun normalizeHref(raw: String): String =
             if (raw.startsWith("http")) raw
@@ -648,19 +606,25 @@ class SamehadakuProvider : MainAPI() {
                         }
                     }
                     u.contains("mega.nz", ignoreCase = true) -> {
-                        // Mega terenkripsi AES - TIDAK bisa diputar native.
-                        // Tetap ditambahkan terakhir (validasi isFileAlive)
-                        // untuk keperluan copy ke downloader, bukan untuk play utama.
-                        if (!seenUrls.add(u)) continue
-                        links.add(
-                                newExtractorLink(
-                                        "Samehadaku",
-                                        server.sourceName.ifBlank { "Mega" },
-                                        server.embedUrl,
-                                        ExtractorLinkType.VIDEO) {
-                                    this.quality = server.quality
-                                    this.referer = server.referer
-                                })
+                        // File Mega terenkripsi end-to-end, jadi tidak bisa
+                        // diputar ExoPlayer secara langsung. Isinya diambil
+                        // lewat API mega, didekripsi, lalu disajikan lewat proxy
+                        // HTTP lokal (MegaProxy) yang mendukung Range.
+                        // File yang sudah mati/tidak ada tidak ditawarkan
+                        // (sebelumnya memicu Error 3003).
+                        val resolved = runCatching { Mega.resolve(u) }.getOrNull()
+                        if (resolved != null) {
+                            val local = MegaProxy.register(u, resolved)
+                            links.add(
+                                    newExtractorLink(
+                                            "Samehadaku",
+                                            server.sourceName.ifBlank { "Mega" },
+                                            local,
+                                            ExtractorLinkType.VIDEO) {
+                                        this.quality = server.quality
+                                        this.referer = server.referer
+                                    })
+                        }
                     }
                     // File video langsung: wibufile s0.*.mp4, dsb.
                     u.substringBefore('?').endsWith(".mp4", true) ||
@@ -702,127 +666,35 @@ class SamehadakuProvider : MainAPI() {
             }
         }
 
-        if (links.isEmpty()) {
-            // 2) FALLBACK / TAMBAHAN: embedder bawaan Oploverz.
-            //    - data masih URL oploverz (sisa data lama / alur lama),  ATAU
-            //    - halaman episode samehadaku tidak punya server hidup.
-            //    Post episode oploverz: /<slug>-episode-<N>-subtitle-indonesia/
-            //    (slug & nomor bisa ditebak langsung dari URL episode samehadaku).
-            val path = normData.substringAfterLast('/').trim('/').substringBefore('?')
-            val slug = path.substringBefore("-episode-").trim('-')
-            val num = Regex("-episode-(\\d+)").find(path)?.groupValues?.get(1)
-            val host = oplHosts[oplHostIndex]
-            val targetUrl =
-                    if (data.contains("oploverz", ignoreCase = true)) {
-                        // oploverz URL: pakai apa adanya (suffix -subtitle-indonesia
-                        // sudah ada di path-nya)
-                        data
-                    } else if (slug.isNotEmpty()) {
-                        "$host/$slug-episode-${num ?: "1"}-subtitle-indonesia/"
-                    } else null
-
-            if (targetUrl != null) {
-                try {
-                    val doc = oplDoc(targetUrl, "iframe")
-                    // 2a) mapping episode samehadaku dari judul anime oploverz
-                    val parsed = SamehadakuParser.parseOploverzEpisode(doc, targetUrl)
-                    if (parsed != null) {
-                        val (animeTitle, episodeNumber) = parsed
-                        // Batas waktu: jangan menahan UI app > ~20 detik.
-                        val sameEpisode =
-                                withTimeout(20_000) {
-                                    SamehadakuParser.guessEpisode(targetUrl, episodeNumber)
-                                            ?: SamehadakuParser.resolveEpisode(animeTitle, episodeNumber)
-                                } ?: null
-                        if (sameEpisode != null) {
-                            for (server in SamehadakuParser.episodeServers(sameEpisode)) {
-                                if (links.any { it.url == server.embedUrl }) continue
-                                if (server.embedUrl.contains("blogger.com", ignoreCase = true)) {
-                                    Blogger().getUrl(server.embedUrl, server.referer) {
-                                        links.add(it)
-                                    }
-                                } else {
-                                    links.add(
-                                            newExtractorLink(
-                                                    "Samehadaku",
-                                                    server.label.ifBlank { "Mega" },
-                                                    server.embedUrl,
-                                                    ExtractorLinkType.VIDEO) {
-                                                this.quality = server.quality
-                                                this.referer = server.referer
-                                            })
-                                }
-                            }
-                        }
-                    }
-                    // 2b) iframe bawaan halaman episode oploverz (#pembed/
-                    //     #embed_holder + src iframe) - upbolt/blogspot/filedon...
-                    val seen = links.map { it.url }.toMutableSet()
-                    val collect: (ExtractorLink) -> Unit = { link ->
-                        if (seen.add(link.url)) links.add(link)
-                    }
-                    val iframes =
-                            doc.select(
-                                            "#pembed iframe[src], #embed_holder iframe[src], iframe[src]")
-                                    .map { it.attr("src") }
-                                    .filter { it.isNotEmpty() }
-                                    .distinct()
-                    for (iframe in iframes) {
-                        // iframe bisa relatif terhadap host oploverz (bukan mainUrl
-                        // yang sudah pindah ke samehadaku); absolutkan manual.
-                        val abs =
-                                if (iframe.startsWith("http")) iframe
-                                else {
-                                    val h =
-                                            targetUrl.substringAfter("://").substringBefore('/')
-                                    "https://$h" + (if (iframe.startsWith("/")) iframe else "/$iframe")
-                                }
-                        loadExtractor(abs, targetUrl, subtitleCallback, collect)
-                    }
-                } catch (e: Throwable) {
-                    // situs fallback mati total -> links dicoba apa adanya
-                }
-            }
-        }
-
         if (links.isEmpty()) return false
 
-        // 3) Validasi link media SECARA PARALEL (GET Range 1 KB):
-        //    - Blogger/UpBolt kadang balas 403/400 (video mati / dioff sesaat).
-        //      Link yang mati dibuang dari baris awal daftar supaya sumber
-        //      pertama yang ditawarkan app benar-benar bisa diputar.
-        //    - Mega.nz dites lewat API mega (lihat Mega.isFileAlive): entry
-        //      yang filenya sudah dihapus / inaktif TIDAK ditambahkan lagi,
-        //      jadi tidak memicu Error 3003 saat dipilih user. (File Mega
-        //      yang masih hidup tetap dikeluarkan di urutan terakhir untuk
-        //      keperluan copy manual ke downloader/aplikasi Mega.)
+        // 3) Validasi link media SECARA PARALEL (HEAD + Range 1 KB):
+        //    - Link googlevideo (Blogger) TIDAK divalidasi: URL-nya diambil
+        //      langsung dari config player Blogger dan hanya hidup ~8 jam.
+        //      Request tambahan ke googlevideo justru bisa memicu pemblokiran
+        //      IP sementara (403 -> Error 2004) dan membuat link baik dianggap
+        //      mati.
+        //    - Link lain (mis. proxy Mega lokal) dicek masih hidup supaya
+        //      sumber pertama yang ditawarkan benar-benar bisa diputar.
         //    Semua pemeriksaan jalan bersamaan (dulu berurutan: 1 HEAD per
         //    link, bisa >5 detik di box Android sebelum daftar muncul).
-        val playable = links.filter { !it.url.contains("mega.nz", ignoreCase = true) }
-        val mega = links.filter { it.url.contains("mega.nz", ignoreCase = true) }
+        val bloggerLinks = links.filter { it.url.contains("googlevideo.com", ignoreCase = true) }
+        val needCheck = links.filterNot { it.url.contains("googlevideo.com", ignoreCase = true) }
 
-        val (alive, dead, megaAlive) =
+        val (alive, dead) =
                 coroutineScope {
-                    val checkPlayable =
-                            playable.sortedByDescending { it.quality }.map { l ->
+                    val checks =
+                            needCheck.sortedByDescending { it.quality }.map { l ->
                                 async { l to isMediaLinkAlive(l.url, l.referer) }
                             }
-                    val checkMega =
-                            mega.sortedByDescending { it.quality }.map { l ->
-                                async { l to Mega.isFileAlive(l.url) }
-                            }
-                    val pl = checkPlayable.awaitAll()
-                    val ml = checkMega.awaitAll()
-                    Triple(
-                            pl.filter { it.second }.map { it.first },
-                            pl.filterNot { it.second }.map { it.first },
-                            ml.filter { it.second }.map { it.first })
+                    val res = checks.awaitAll()
+                    res.filter { it.second }.map { it.first } to
+                            res.filterNot { it.second }.map { it.first }
                 }
 
-        // Urutan: link hidup (kualitas tertinggi) -> link yang gagal
-        // divalidasi (fallback, mis. video Blogger yang keburu diblokir
-        // sesaat) -> Mega yang terverifikasi masih hidup.
-        for (l in alive + dead + megaAlive) {
+        // Urutan: link hidup (kualitas tertinggi) -> link Blogger -> link yang
+        // gagal divalidasi (fallback, mis. video yang keburu diblokir sesaat).
+        for (l in alive + bloggerLinks + dead) {
             callback(l)
         }
         return true
