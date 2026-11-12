@@ -612,6 +612,7 @@ class SamehadakuProvider : MainAPI() {
                         // HTTP lokal (MegaProxy) yang mendukung Range.
                         // File yang sudah mati/tidak ada tidak ditawarkan
                         // (sebelumnya memicu Error 3003).
+                        if (!seenUrls.add(u)) continue
                         val resolved = runCatching { Mega.resolve(u) }.getOrNull()
                         if (resolved != null) {
                             val local = MegaProxy.register(u, resolved)

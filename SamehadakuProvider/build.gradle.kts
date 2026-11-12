@@ -1,4 +1,4 @@
-version = 34
+version = 35
 
 cloudstream {
     description = "SamehadakuxHermes - Anime Sub Indo dari v2.samehadaku.how (tab Terbaru + Top Minggu, film & series, server Blogspot multi-itag + VIP Streaming (Filedon) + Mega 480p-4K, validator link hidup)."
