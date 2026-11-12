@@ -30,6 +30,9 @@ import kotlinx.coroutines.runBlocking
  */
 object MegaProxy {
 
+    /** Batas data yang dikirim untuk request tanpa Range (preview thumbnail). */
+    private const val MAX_PREVIEW_BYTES = 4L * 1024 * 1024
+
     private class Entry(val file: Mega.File, val embedUrl: String)
 
     private val entries = ConcurrentHashMap<String, Entry>()
@@ -91,13 +94,19 @@ object MegaProxy {
                 }
 
                 val range = headers["range"]
+                val hasRange = !range.isNullOrBlank()
                 val (start, requestedEnd) = parseRange(range, entry.file.size)
-                val endExclusive =
+                var endExclusive =
                         when {
                             requestedEnd == null -> entry.file.size
                             requestedEnd >= entry.file.size -> entry.file.size
                             else -> requestedEnd + 1
                         }
+                // Tanpa header Range (mis. pemuat preview thumbnail CloudStream)
+                // Jangan tarik seluruh file (bisa 1-2 GB) - cukup 4 MB awal.
+                if (!hasRange && endExclusive - start > MAX_PREVIEW_BYTES) {
+                    endExclusive = start + MAX_PREVIEW_BYTES
+                }
                 if (start >= entry.file.size || endExclusive <= start) {
                     sendHeaders(output, 416, "text/plain", 0, "bytes */${entry.file.size}")
                     return
